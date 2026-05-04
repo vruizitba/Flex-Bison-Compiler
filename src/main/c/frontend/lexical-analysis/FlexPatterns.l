@@ -25,6 +25,7 @@ extern CompilationStatus LeaveMultilineCommentLexemeAction();
 extern CompilationStatus ParenthesisLexemeAction(TokenLabel label);
 extern CompilationStatus SubexpressionLexemeAction();
 extern CompilationStatus IdentifierLexemeAction();
+extern CompilationStatus KeywordLexemeAction(TokenLabel label);
 extern CompilationStatus UnknownLexemeAction();
 
 %}
@@ -73,6 +74,35 @@ whitespace			[[:space:]]+
 
 "("									{ return ParenthesisLexemeAction(OPEN_PARENTHESIS); }
 ")"									{ return ParenthesisLexemeAction(CLOSE_PARENTHESIS); }
+
+"int"								{ return KeywordLexemeAction(TYPE_INT); }
+"bool"								{ return KeywordLexemeAction(TYPE_BOOL); }
+"string"							{ return KeywordLexemeAction(TYPE_STRING); }
+"char"								{ return KeywordLexemeAction(TYPE_CHAR); }
+"float"								{ return KeywordLexemeAction(TYPE_FLOAT); }
+"double"							{ return KeywordLexemeAction(TYPE_DOUBLE); }
+"void"								{ return KeywordLexemeAction(TYPE_VOID); }
+"signed"							{ return KeywordLexemeAction(SIGNED); }
+"unsigned"							{ return KeywordLexemeAction(UNSIGNED); }
+"short"								{ return KeywordLexemeAction(SHORT); }
+"long"								{ return KeywordLexemeAction(LONG); }
+"true"								{ return KeywordLexemeAction(BOOLEAN_TRUE); }
+"false"								{ return KeywordLexemeAction(BOOLEAN_FALSE); }
+"class"								{ return KeywordLexemeAction(CLASS); }
+"extends"							{ return KeywordLexemeAction(EXTENDS); }
+"public"							{ return KeywordLexemeAction(PUBLIC); }
+"private"							{ return KeywordLexemeAction(PRIVATE); }
+"protected"							{ return KeywordLexemeAction(PROTECTED); }
+"static"							{ return KeywordLexemeAction(STATIC); }
+"this"								{ return KeywordLexemeAction(THIS); }
+"new"								{ return KeywordLexemeAction(NEW); }
+"if"								{ return KeywordLexemeAction(IF); }
+"else"								{ return KeywordLexemeAction(ELSE); }
+"while"								{ return KeywordLexemeAction(WHILE); }
+"for"								{ return KeywordLexemeAction(FOR); }
+"return"							{ return KeywordLexemeAction(RETURN); }
+"main"								{ return KeywordLexemeAction(MAIN); }
+"function"							{ return KeywordLexemeAction(FUNCTION); }
 
 [[:alpha:]_][[:alnum:]_]*			{ return IdentifierLexemeAction(); }
 

@@ -55,6 +55,13 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 /** Terminals. */
 %token <string> IDENTIFIER
 %token <integer> INTEGER
+
+%token TYPE_INT TYPE_BOOL TYPE_STRING TYPE_CHAR TYPE_FLOAT TYPE_DOUBLE TYPE_VOID
+%token SIGNED UNSIGNED SHORT LONG
+%token BOOLEAN_TRUE BOOLEAN_FALSE
+%token CLASS EXTENDS PUBLIC PRIVATE PROTECTED STATIC THIS NEW
+%token IF ELSE WHILE FOR RETURN
+%token MAIN FUNCTION
 %token <token> ADD
 %token <token> CLOSE_BRACE
 %token <token> CLOSE_COMMENT

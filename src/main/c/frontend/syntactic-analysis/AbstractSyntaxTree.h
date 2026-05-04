@@ -86,9 +86,9 @@ typedef enum {
 } Visibility;
 
 typedef enum {
-    TYPE_INT, TYPE_BOOL, TYPE_STRING, TYPE_CHAR,
-    TYPE_FLOAT, TYPE_DOUBLE, TYPE_VOID,
-    TYPE_CLASS, TYPE_POINTER, TYPE_ARRAY
+    TYPEKIND_INT, TYPEKIND_BOOL, TYPEKIND_STRING, TYPEKIND_CHAR,
+    TYPEKIND_FLOAT, TYPEKIND_DOUBLE, TYPEKIND_VOID,
+    TYPEKIND_CLASS, TYPEKIND_POINTER, TYPEKIND_ARRAY
 } TypeKind;
 
 typedef enum {
@@ -139,9 +139,9 @@ struct Type {
     char isUnsigned;
     char isShort;
     char isLong;
-    char * className;   // TYPE_CLASS
-    Type * inner;       // TYPE_POINTER, TYPE_ARRAY
-    int arraySize;      // TYPE_ARRAY (-1 = no size specified)
+    char * className;   // TYPEKIND_CLASS
+    Type * inner;       // TYPEKIND_POINTER, TYPEKIND_ARRAY
+    int arraySize;      // TYPEKIND_ARRAY (-1 = no size specified)
 };
 
 void destroyType(Type * type);
