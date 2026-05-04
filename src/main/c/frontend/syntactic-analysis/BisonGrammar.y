@@ -27,6 +27,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 	/** Terminals. */
 
 	signed int integer;
+	double real;
 	char * string;
 	TokenLabel token;
 
@@ -55,6 +56,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 /** Terminals. */
 %token <string> IDENTIFIER
 %token <integer> INTEGER
+%token <real> REAL
 
 %token TYPE_INT TYPE_BOOL TYPE_STRING TYPE_CHAR TYPE_FLOAT TYPE_DOUBLE TYPE_VOID
 %token SIGNED UNSIGNED SHORT LONG

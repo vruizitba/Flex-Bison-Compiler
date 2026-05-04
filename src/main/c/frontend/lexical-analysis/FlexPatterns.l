@@ -24,6 +24,7 @@ extern CompilationStatus LeaveImportExpressionLexemeAction();
 extern CompilationStatus LeaveMultilineCommentLexemeAction();
 extern CompilationStatus ParenthesisLexemeAction(TokenLabel label);
 extern CompilationStatus SubexpressionLexemeAction();
+extern CompilationStatus FloatLexemeAction();
 extern CompilationStatus IdentifierLexemeAction();
 extern CompilationStatus KeywordLexemeAction(TokenLabel label);
 extern CompilationStatus UnknownLexemeAction();
@@ -106,6 +107,7 @@ whitespace			[[:space:]]+
 
 [[:alpha:]_][[:alnum:]_]*			{ return IdentifierLexemeAction(); }
 
+[[:digit:]]+\.[[:digit:]]+			{ return FloatLexemeAction(); }
 [[:digit:]]+						{ return IntegerLexemeAction(); }
 
 {whitespace}						{ return IgnoredLexemeAction(); }
