@@ -55,7 +55,7 @@ static void _logTokenAction(const char * actionName, Token * token) {
 /* PUBLIC FUNCTIONS */
 
 CompilationStatus CharLexemeAction() {
-	Token * token = createToken(_lexicalAnalyzer, CHAR_LITERAL);
+	Token * token = createToken(_lexicalAnalyzer, CHAR);
 	if (token->lexeme[1] == '\\') {
 		switch (token->lexeme[2]) {
 			case 'n':  token->semanticValue->character = '\n'; break;
@@ -117,7 +117,7 @@ CompilationStatus StringEscapeLexemeAction() {
 
 CompilationStatus LeaveStringLiteralLexemeAction() {
 	leaveLexicalAnalyzerContext(_lexicalAnalyzer);
-	Token * token = createToken(_lexicalAnalyzer, STRING_LITERAL);
+	Token * token = createToken(_lexicalAnalyzer, STRING);
 	token->semanticValue->string = _stringBuffer;
 	_stringBuffer = NULL;
 	_stringBufferLength = 0;
@@ -128,7 +128,7 @@ CompilationStatus LeaveStringLiteralLexemeAction() {
 }
 
 CompilationStatus FloatLexemeAction() {
-	Token * token = createToken(_lexicalAnalyzer, REAL);
+	Token * token = createToken(_lexicalAnalyzer, FLOAT);
 	token->semanticValue->real = atof(token->lexeme);
 	_logTokenAction(__FUNCTION__, token);
 	CompilationStatus status = pushToken(_lexicalAnalyzer, token);

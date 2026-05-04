@@ -55,11 +55,11 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %destructor { free($$); } <string>
 
 /** Terminals. */
-%token <character> CHAR_LITERAL
+%token <character> CHAR
 %token <string> IDENTIFIER
-%token <string> STRING_LITERAL
+%token <string> STRING
 %token <integer> INTEGER
-%token <real> REAL
+%token <real> FLOAT
 
 %token TYPE_INT TYPE_BOOL TYPE_STRING TYPE_CHAR TYPE_FLOAT TYPE_DOUBLE TYPE_VOID
 %token SIGNED UNSIGNED SHORT LONG
@@ -67,9 +67,9 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %token CLASS EXTENDS PUBLIC PRIVATE PROTECTED STATIC THIS NEW
 %token IF ELSE WHILE FOR RETURN
 %token MAIN FUNCTION
-%token ADD SUB ASTERISK DIV MOD
+%token ADD SUBTRACT ASTERISK DIVIDE MODULO
 %token INCREMENT DECREMENT
-%token PLUS_ASSIGN MINUS_ASSIGN ASTERISK_ASSIGN DIV_ASSIGN MOD_ASSIGN
+%token PLUS_ASSIGN MINUS_ASSIGN ASTERISK_ASSIGN DIVIDE_ASSIGN MODULO_ASSIGN
 %token ASSIGN
 %token EQUAL NOT_EQUAL LESS GREATER LESS_EQUAL GREATER_EQUAL
 %token AND OR NOT
@@ -78,11 +78,11 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %token OPEN_BRACE CLOSE_BRACE
 %token OPEN_BRACKET CLOSE_BRACKET
 %token COMMA SEMICOLON
-%token <token> CLOSE_COMMENT
-%token <token> OPEN_COMMENT
+%token CLOSE_COMMENT
+%token OPEN_COMMENT
 
-%token <token> IGNORED
-%token <token> UNKNOWN
+%token IGNORED
+%token UNKNOWN
 
 /** Non-terminals. */
 %type <constant> constant
@@ -96,8 +96,9 @@ void yyerror(const YYLTYPE * location, const char * message) {}
  * @see https://en.cppreference.com/w/cpp/language/operator_precedence.html
  * @see https://www.gnu.org/software/bison/manual/html_node/Precedence.html
  */
-%left ADD SUB
-%left ASTERISK DIV
+
+%left ADD SUBTRACT
+%left ASTERISK DIVIDE
 
 %%
 
@@ -107,14 +108,14 @@ program: expression											{ $$ = ExpressionProgramSemanticAction($1); }
 	;
 
 expression: expression[left] ADD expression[right]			{ $$ = ArithmeticExpressionSemanticAction($left, $right, ADDITION); }
-	| expression[left] DIV expression[right]				{ $$ = ArithmeticExpressionSemanticAction($left, $right, DIVISION); }
-	| expression[left] ASTERISK expression[right]			{ $$ = ArithmeticExpressionSemanticAction($left, $right, MULTIPLICATION); }
-	| expression[left] SUB expression[right]				{ $$ = ArithmeticExpressionSemanticAction($left, $right, SUBTRACTION); }
-	| factor												{ $$ = FactorExpressionSemanticAction($1); }
+	| expression[left] DIVIDE expression[right]						{ $$ = ArithmeticExpressionSemanticAction($left, $right, DIVISION); }
+	| expression[left] ASTERISK expression[right]					{ $$ = ArithmeticExpressionSemanticAction($left, $right, MULTIPLICATION); }
+	| expression[left] SUBTRACT expression[right]					{ $$ = ArithmeticExpressionSemanticAction($left, $right, SUBTRACTION); }
+	| factor																							{ $$ = FactorExpressionSemanticAction($1); }
 	;
 
 factor: OPEN_PARENTHESIS expression CLOSE_PARENTHESIS		{ $$ = ExpressionFactorSemanticAction($2); }
-	| constant												{ $$ = ConstantFactorSemanticAction($1); }
+	| constant																						{ $$ = ConstantFactorSemanticAction($1); }
 	;
 
 constant: INTEGER											{ $$ = IntegerConstantSemanticAction($1); }
