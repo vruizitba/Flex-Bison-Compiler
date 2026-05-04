@@ -24,6 +24,7 @@ extern CompilationStatus LeaveImportExpressionLexemeAction();
 extern CompilationStatus LeaveMultilineCommentLexemeAction();
 extern CompilationStatus ParenthesisLexemeAction(TokenLabel label);
 extern CompilationStatus SubexpressionLexemeAction();
+extern CompilationStatus CharLexemeAction();
 extern CompilationStatus EnterStringLiteralLexemeAction(FlexContext context);
 extern CompilationStatus FloatLexemeAction();
 extern CompilationStatus IdentifierLexemeAction();
@@ -110,6 +111,7 @@ whitespace			[[:space:]]+
 "main"								{ return KeywordLexemeAction(MAIN); }
 "function"							{ return KeywordLexemeAction(FUNCTION); }
 
+'(\\.|[^'\\])'						{ return CharLexemeAction(); }
 "\""								{ return EnterStringLiteralLexemeAction(STRING_LITERAL); }
 <STRING_LITERAL>"\""				{ return LeaveStringLiteralLexemeAction(); }
 <STRING_LITERAL>\\.					{ return StringEscapeLexemeAction(); }

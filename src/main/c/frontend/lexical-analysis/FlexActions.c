@@ -54,6 +54,27 @@ static void _logTokenAction(const char * actionName, Token * token) {
 
 /* PUBLIC FUNCTIONS */
 
+CompilationStatus CharLexemeAction() {
+	Token * token = createToken(_lexicalAnalyzer, CHAR_LITERAL);
+	if (token->lexeme[1] == '\\') {
+		switch (token->lexeme[2]) {
+			case 'n':  token->semanticValue->character = '\n'; break;
+			case 't':  token->semanticValue->character = '\t'; break;
+			case 'r':  token->semanticValue->character = '\r'; break;
+			case '\\': token->semanticValue->character = '\\'; break;
+			case '\'': token->semanticValue->character = '\''; break;
+			case '0':  token->semanticValue->character = '\0'; break;
+			default:   token->semanticValue->character = token->lexeme[2]; break;
+		}
+	} else {
+		token->semanticValue->character = token->lexeme[1];
+	}
+	_logTokenAction(__FUNCTION__, token);
+	CompilationStatus status = pushToken(_lexicalAnalyzer, token);
+	destroyToken(token);
+	return status;
+}
+
 CompilationStatus EnterStringLiteralLexemeAction(FlexContext context) {
 	_stringBuffer = malloc(1);
 	_stringBuffer[0] = '\0';

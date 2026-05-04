@@ -26,6 +26,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %union {
 	/** Terminals. */
 
+	char character;
 	signed int integer;
 	double real;
 	char * string;
@@ -54,6 +55,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %destructor { free($$); } <string>
 
 /** Terminals. */
+%token <character> CHAR_LITERAL
 %token <string> IDENTIFIER
 %token <string> STRING_LITERAL
 %token <integer> INTEGER
