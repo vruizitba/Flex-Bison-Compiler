@@ -14,7 +14,7 @@
  * @see https://westes.github.io/flex/manual/Definitions-Section.html#Definitions-Section
  */
 
-extern CompilationStatus ArithmeticOperatorLexemeAction(TokenLabel label);
+extern CompilationStatus OperatorLexemeAction(TokenLabel label);
 extern CompilationStatus EnterImportExpressionLexemeAction(FlexContext context);
 extern CompilationStatus EnterMultilineCommentLexemeAction(FlexContext context);
 extern CompilationStatus EOFLexemeAction();
@@ -74,10 +74,31 @@ whitespace			[[:space:]]+
 <MULTILINE_COMMENT>[^*]+			{ return IgnoredLexemeAction(); }
 <MULTILINE_COMMENT>.				{ return IgnoredLexemeAction(); }
 
-"-"									{ return ArithmeticOperatorLexemeAction(SUB); }
-"*"									{ return ArithmeticOperatorLexemeAction(MUL); }
-"/"									{ return ArithmeticOperatorLexemeAction(DIV); }
-"+"									{ return ArithmeticOperatorLexemeAction(ADD); }
+"++"								{ return OperatorLexemeAction(INCREMENT); }
+"--"								{ return OperatorLexemeAction(DECREMENT); }
+"+="								{ return OperatorLexemeAction(PLUS_ASSIGN); }
+"-="								{ return OperatorLexemeAction(MINUS_ASSIGN); }
+"*="								{ return OperatorLexemeAction(ASTERISK_ASSIGN); }
+"/="								{ return OperatorLexemeAction(DIV_ASSIGN); }
+"%="								{ return OperatorLexemeAction(MOD_ASSIGN); }
+"+"									{ return OperatorLexemeAction(ADD); }
+"-"									{ return OperatorLexemeAction(SUB); }
+"*"									{ return OperatorLexemeAction(ASTERISK); }
+"/"									{ return OperatorLexemeAction(DIV); }
+"%"									{ return OperatorLexemeAction(MOD); }
+"=="								{ return OperatorLexemeAction(EQUAL); }
+"!="								{ return OperatorLexemeAction(NOT_EQUAL); }
+"<="								{ return OperatorLexemeAction(LESS_EQUAL); }
+">="								{ return OperatorLexemeAction(GREATER_EQUAL); }
+"<"									{ return OperatorLexemeAction(LESS); }
+">"									{ return OperatorLexemeAction(GREATER); }
+"&&"								{ return OperatorLexemeAction(AND); }
+"||"								{ return OperatorLexemeAction(OR); }
+"!"									{ return OperatorLexemeAction(NOT); }
+"->"								{ return OperatorLexemeAction(ARROW); }
+"."									{ return OperatorLexemeAction(DOT); }
+"&"									{ return OperatorLexemeAction(AMPERSAND); }
+"="									{ return OperatorLexemeAction(ASSIGN); }
 
 "("									{ return ParenthesisLexemeAction(OPEN_PARENTHESIS); }
 ")"									{ return ParenthesisLexemeAction(CLOSE_PARENTHESIS); }

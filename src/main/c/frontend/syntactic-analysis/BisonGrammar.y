@@ -67,16 +67,19 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %token CLASS EXTENDS PUBLIC PRIVATE PROTECTED STATIC THIS NEW
 %token IF ELSE WHILE FOR RETURN
 %token MAIN FUNCTION
-%token <token> ADD
+%token ADD SUB ASTERISK DIV MOD
+%token INCREMENT DECREMENT
+%token PLUS_ASSIGN MINUS_ASSIGN ASTERISK_ASSIGN DIV_ASSIGN MOD_ASSIGN
+%token ASSIGN
+%token EQUAL NOT_EQUAL LESS GREATER LESS_EQUAL GREATER_EQUAL
+%token AND OR NOT
+%token DOT ARROW AMPERSAND
 %token <token> CLOSE_BRACE
 %token <token> CLOSE_COMMENT
 %token <token> CLOSE_PARENTHESIS
-%token <token> DIV
-%token <token> MUL
 %token <token> OPEN_BRACE
 %token <token> OPEN_COMMENT
 %token <token> OPEN_PARENTHESIS
-%token <token> SUB
 
 %token <token> IGNORED
 %token <token> UNKNOWN
@@ -94,7 +97,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
  * @see https://www.gnu.org/software/bison/manual/html_node/Precedence.html
  */
 %left ADD SUB
-%left MUL DIV
+%left ASTERISK DIV
 
 %%
 
@@ -105,7 +108,7 @@ program: expression											{ $$ = ExpressionProgramSemanticAction($1); }
 
 expression: expression[left] ADD expression[right]			{ $$ = ArithmeticExpressionSemanticAction($left, $right, ADDITION); }
 	| expression[left] DIV expression[right]				{ $$ = ArithmeticExpressionSemanticAction($left, $right, DIVISION); }
-	| expression[left] MUL expression[right]				{ $$ = ArithmeticExpressionSemanticAction($left, $right, MULTIPLICATION); }
+	| expression[left] ASTERISK expression[right]			{ $$ = ArithmeticExpressionSemanticAction($left, $right, MULTIPLICATION); }
 	| expression[left] SUB expression[right]				{ $$ = ArithmeticExpressionSemanticAction($left, $right, SUBTRACTION); }
 	| factor												{ $$ = FactorExpressionSemanticAction($1); }
 	;
