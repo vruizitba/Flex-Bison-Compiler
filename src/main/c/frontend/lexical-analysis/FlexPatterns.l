@@ -24,6 +24,7 @@ extern CompilationStatus LeaveImportExpressionLexemeAction();
 extern CompilationStatus LeaveMultilineCommentLexemeAction();
 extern CompilationStatus ParenthesisLexemeAction(TokenLabel label);
 extern CompilationStatus SubexpressionLexemeAction();
+extern CompilationStatus IdentifierLexemeAction();
 extern CompilationStatus UnknownLexemeAction();
 
 %}
@@ -59,6 +60,7 @@ whitespace			[[:space:]]+
 <IMPORT_EXPRESSION>"}"				{ return LeaveImportExpressionLexemeAction(); }
 <IMPORT_EXPRESSION>.				{ return UnknownLexemeAction(); }
 
+"//"[^\n]*							{ return IgnoredLexemeAction(); }
 "/*"								{ return EnterMultilineCommentLexemeAction(MULTILINE_COMMENT); }
 <MULTILINE_COMMENT>"*/"				{ return LeaveMultilineCommentLexemeAction(); }
 <MULTILINE_COMMENT>[^*]+			{ return IgnoredLexemeAction(); }
@@ -71,6 +73,8 @@ whitespace			[[:space:]]+
 
 "("									{ return ParenthesisLexemeAction(OPEN_PARENTHESIS); }
 ")"									{ return ParenthesisLexemeAction(CLOSE_PARENTHESIS); }
+
+[[:alpha:]_][[:alnum:]_]*			{ return IdentifierLexemeAction(); }
 
 [[:digit:]]+						{ return IntegerLexemeAction(); }
 
