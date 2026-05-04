@@ -15,15 +15,15 @@
  */
 
 extern CompilationStatus OperatorLexemeAction(TokenLabel label);
-extern CompilationStatus EnterImportExpressionLexemeAction(FlexContext context);
+/* extern CompilationStatus EnterImportExpressionLexemeAction(FlexContext context); */
 extern CompilationStatus EnterMultilineCommentLexemeAction(FlexContext context);
 extern CompilationStatus EOFLexemeAction();
 extern CompilationStatus IgnoredLexemeAction();
 extern CompilationStatus IntegerLexemeAction();
-extern CompilationStatus LeaveImportExpressionLexemeAction();
+//extern CompilationStatus LeaveImportExpressionLexemeAction(); 
 extern CompilationStatus LeaveMultilineCommentLexemeAction();
-extern CompilationStatus ParenthesisLexemeAction(TokenLabel label);
-extern CompilationStatus SubexpressionLexemeAction();
+extern CompilationStatus PunctuationLexemeAction(TokenLabel label);
+//extern CompilationStatus SubexpressionLexemeAction(); 
 extern CompilationStatus CharLexemeAction();
 extern CompilationStatus EnterStringLiteralLexemeAction(FlexContext context);
 extern CompilationStatus FloatLexemeAction();
@@ -41,7 +41,7 @@ extern CompilationStatus UnknownLexemeAction();
  *
  * @see https://westes.github.io/flex/manual/Start-Conditions.html
  */
-%x IMPORT_EXPRESSION
+/* %x IMPORT_EXPRESSION */
 %x MULTILINE_COMMENT
 %x STRING_LITERAL
 
@@ -63,10 +63,6 @@ whitespace			[[:space:]]+
 
 %}
 
-"{"									{ return EnterImportExpressionLexemeAction(IMPORT_EXPRESSION); }
-<IMPORT_EXPRESSION>[^{}]+			{ return SubexpressionLexemeAction(); }
-<IMPORT_EXPRESSION>"}"				{ return LeaveImportExpressionLexemeAction(); }
-<IMPORT_EXPRESSION>.				{ return UnknownLexemeAction(); }
 
 "//"[^\n]*							{ return IgnoredLexemeAction(); }
 "/*"								{ return EnterMultilineCommentLexemeAction(MULTILINE_COMMENT); }
@@ -100,8 +96,14 @@ whitespace			[[:space:]]+
 "&"									{ return OperatorLexemeAction(AMPERSAND); }
 "="									{ return OperatorLexemeAction(ASSIGN); }
 
-"("									{ return ParenthesisLexemeAction(OPEN_PARENTHESIS); }
-")"									{ return ParenthesisLexemeAction(CLOSE_PARENTHESIS); }
+"("									{ return PunctuationLexemeAction(OPEN_PARENTHESIS); }
+")"									{ return PunctuationLexemeAction(CLOSE_PARENTHESIS); }
+"{"									{ return PunctuationLexemeAction(OPEN_BRACE); }
+"}"									{ return PunctuationLexemeAction(CLOSE_BRACE); }
+"["									{ return PunctuationLexemeAction(OPEN_BRACKET); }
+"]"									{ return PunctuationLexemeAction(CLOSE_BRACKET); }
+","									{ return PunctuationLexemeAction(COMMA); }
+";"									{ return PunctuationLexemeAction(SEMICOLON); }
 
 "int"								{ return KeywordLexemeAction(TYPE_INT); }
 "bool"								{ return KeywordLexemeAction(TYPE_BOOL); }

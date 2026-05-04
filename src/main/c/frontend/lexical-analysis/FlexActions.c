@@ -161,6 +161,7 @@ CompilationStatus OperatorLexemeAction(TokenLabel label) {
 	return status;
 }
 
+/*
 CompilationStatus EnterImportExpressionLexemeAction(FlexContext context) {
 	if (_logIgnoredLexemes) {
 		Token * token = createToken(_lexicalAnalyzer, OPEN_BRACE);
@@ -170,6 +171,7 @@ CompilationStatus EnterImportExpressionLexemeAction(FlexContext context) {
 	enterLexicalAnalyzerContext(_lexicalAnalyzer, context);
 	return IN_PROGRESS;
 }
+*/
 
 CompilationStatus EnterMultilineCommentLexemeAction(FlexContext context) {
 	if (_logIgnoredLexemes) {
@@ -215,6 +217,7 @@ CompilationStatus IntegerLexemeAction() {
 	return status;
 }
 
+/* 
 CompilationStatus LeaveImportExpressionLexemeAction() {
 	pushInputBuffer(_inputBuffer);
 	leaveLexicalAnalyzerContext(_lexicalAnalyzer);
@@ -225,6 +228,7 @@ CompilationStatus LeaveImportExpressionLexemeAction() {
 	}
 	return IN_PROGRESS;
 }
+*/
 
 CompilationStatus LeaveMultilineCommentLexemeAction() {
 	leaveLexicalAnalyzerContext(_lexicalAnalyzer);
@@ -236,7 +240,7 @@ CompilationStatus LeaveMultilineCommentLexemeAction() {
 	return IN_PROGRESS;
 }
 
-CompilationStatus ParenthesisLexemeAction(TokenLabel label) {
+CompilationStatus PunctuationLexemeAction(TokenLabel label) {
 	Token * token = createToken(_lexicalAnalyzer, label);
 	_logTokenAction(__FUNCTION__, token);
 	CompilationStatus status = pushToken(_lexicalAnalyzer, token);
@@ -244,6 +248,7 @@ CompilationStatus ParenthesisLexemeAction(TokenLabel label) {
 	return status;
 }
 
+/*
 CompilationStatus SubexpressionLexemeAction() {
 	Token * token = createToken(_lexicalAnalyzer, IGNORED);
 	_inputBuffer = createInputBuffer(_lexicalAnalyzer, token->lexeme);
@@ -253,6 +258,7 @@ CompilationStatus SubexpressionLexemeAction() {
 	destroyToken(token);
 	return IN_PROGRESS;
 }
+*/
 
 CompilationStatus UnknownLexemeAction() {
 	Token * token = createToken(_lexicalAnalyzer, UNKNOWN);

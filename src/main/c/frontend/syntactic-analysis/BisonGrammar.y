@@ -74,12 +74,12 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %token EQUAL NOT_EQUAL LESS GREATER LESS_EQUAL GREATER_EQUAL
 %token AND OR NOT
 %token DOT ARROW AMPERSAND
-%token <token> CLOSE_BRACE
+%token OPEN_PARENTHESIS CLOSE_PARENTHESIS
+%token OPEN_BRACE CLOSE_BRACE
+%token OPEN_BRACKET CLOSE_BRACKET
+%token COMMA SEMICOLON
 %token <token> CLOSE_COMMENT
-%token <token> CLOSE_PARENTHESIS
-%token <token> OPEN_BRACE
 %token <token> OPEN_COMMENT
-%token <token> OPEN_PARENTHESIS
 
 %token <token> IGNORED
 %token <token> UNKNOWN
