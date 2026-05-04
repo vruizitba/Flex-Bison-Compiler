@@ -6,6 +6,8 @@ static bool _logIgnoredLexemes = true;
 static InputBuffer * _inputBuffer = NULL;
 static LexicalAnalyzer * _lexicalAnalyzer = NULL;
 static Logger * _logger = NULL;
+static char * _stringBuffer = NULL;
+static int _stringBufferLength = 0;
 
 /** Shutdown module's internal state. */
 void _shutdownFlexActionsModule() {
@@ -51,6 +53,58 @@ static void _logTokenAction(const char * actionName, Token * token) {
 }
 
 /* PUBLIC FUNCTIONS */
+
+CompilationStatus EnterStringLiteralLexemeAction(FlexContext context) {
+	_stringBuffer = malloc(1);
+	_stringBuffer[0] = '\0';
+	_stringBufferLength = 0;
+	enterLexicalAnalyzerContext(_lexicalAnalyzer, context);
+	return IN_PROGRESS;
+}
+
+CompilationStatus StringCharLexemeAction() {
+	Token * token = createToken(_lexicalAnalyzer, IGNORED);
+	int len = token->length;
+	_stringBuffer = realloc(_stringBuffer, _stringBufferLength + len + 1);
+	memcpy(_stringBuffer + _stringBufferLength, token->lexeme, len);
+	_stringBufferLength += len;
+	_stringBuffer[_stringBufferLength] = '\0';
+	destroyToken(token);
+	return IN_PROGRESS;
+}
+
+CompilationStatus StringEscapeLexemeAction() {
+	Token * token = createToken(_lexicalAnalyzer, IGNORED);
+	char c;
+	switch (token->lexeme[1]) {
+		case 'n':  c = '\n'; break;
+		case 't':  c = '\t'; break;
+		case 'r':  c = '\r'; break;
+		case '\\': c = '\\'; break;
+		case '"':  c = '"';  break;
+		case '0':  c = '\0'; break;
+		case '\'': c = '\''; break;
+		default:   c = token->lexeme[1]; break;
+	}
+	_stringBuffer = realloc(_stringBuffer, _stringBufferLength + 2);
+	_stringBuffer[_stringBufferLength] = c;
+	_stringBufferLength++;
+	_stringBuffer[_stringBufferLength] = '\0';
+	destroyToken(token);
+	return IN_PROGRESS;
+}
+
+CompilationStatus LeaveStringLiteralLexemeAction() {
+	leaveLexicalAnalyzerContext(_lexicalAnalyzer);
+	Token * token = createToken(_lexicalAnalyzer, STRING_LITERAL);
+	token->semanticValue->string = _stringBuffer;
+	_stringBuffer = NULL;
+	_stringBufferLength = 0;
+	_logTokenAction(__FUNCTION__, token);
+	CompilationStatus status = pushToken(_lexicalAnalyzer, token);
+	destroyToken(token);
+	return status;
+}
 
 CompilationStatus FloatLexemeAction() {
 	Token * token = createToken(_lexicalAnalyzer, REAL);

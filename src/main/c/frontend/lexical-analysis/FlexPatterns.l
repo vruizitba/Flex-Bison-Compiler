@@ -24,9 +24,13 @@ extern CompilationStatus LeaveImportExpressionLexemeAction();
 extern CompilationStatus LeaveMultilineCommentLexemeAction();
 extern CompilationStatus ParenthesisLexemeAction(TokenLabel label);
 extern CompilationStatus SubexpressionLexemeAction();
+extern CompilationStatus EnterStringLiteralLexemeAction(FlexContext context);
 extern CompilationStatus FloatLexemeAction();
 extern CompilationStatus IdentifierLexemeAction();
 extern CompilationStatus KeywordLexemeAction(TokenLabel label);
+extern CompilationStatus LeaveStringLiteralLexemeAction();
+extern CompilationStatus StringCharLexemeAction();
+extern CompilationStatus StringEscapeLexemeAction();
 extern CompilationStatus UnknownLexemeAction();
 
 %}
@@ -38,6 +42,7 @@ extern CompilationStatus UnknownLexemeAction();
  */
 %x IMPORT_EXPRESSION
 %x MULTILINE_COMMENT
+%x STRING_LITERAL
 
 /**
  * Reusable patterns.
@@ -104,6 +109,11 @@ whitespace			[[:space:]]+
 "return"							{ return KeywordLexemeAction(RETURN); }
 "main"								{ return KeywordLexemeAction(MAIN); }
 "function"							{ return KeywordLexemeAction(FUNCTION); }
+
+"\""								{ return EnterStringLiteralLexemeAction(STRING_LITERAL); }
+<STRING_LITERAL>"\""				{ return LeaveStringLiteralLexemeAction(); }
+<STRING_LITERAL>\\.					{ return StringEscapeLexemeAction(); }
+<STRING_LITERAL>[^"\\]+				{ return StringCharLexemeAction(); }
 
 [[:alpha:]_][[:alnum:]_]*			{ return IdentifierLexemeAction(); }
 

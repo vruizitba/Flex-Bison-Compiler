@@ -55,6 +55,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 
 /** Terminals. */
 %token <string> IDENTIFIER
+%token <string> STRING_LITERAL
 %token <integer> INTEGER
 %token <real> REAL
 
