@@ -32,7 +32,7 @@ const int main(const int length, const char ** arguments) {
 		initializeGeneratorModule()
 	};
 	CompilationStatus compilationStatus = executeSyntacticAnalysis();
-	Program * program = compilerState.abstractSyntaxtTree;
+	DslProgram * program = compilerState.abstractSyntaxtTree;
 	if (compilationStatus == SUCCEEDED) {
 		// ----------------------------------------------------------------------------------------
 		// Beginning of the Backend... ------------------------------------------------------------
@@ -55,7 +55,7 @@ const int main(const int length, const char ** arguments) {
 		compilationStatus = FAILED;
 	}
 	logDebugging(logger, "Releasing AST resources...");
-	destroyProgram(program);
+	destroyDslProgram(program);
 	for (int k = (sizeof(moduleDestructors)/sizeof(ModuleDestructor)) - 1; 0 <= k; --k) {
 		moduleDestructors[k]();
 	}

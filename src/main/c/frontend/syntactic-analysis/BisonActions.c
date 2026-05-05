@@ -83,3 +83,21 @@ Program * ExpressionProgramSemanticAction(Expression * expression) {
 	_compilerState->abstractSyntaxtTree = program;
 	return program;
 }
+
+DslProgram * ProgramSemanticAction(DslProgram * program) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	_compilerState->abstractSyntaxtTree = program;
+	return program;
+}
+
+DslProgram * EmptyDeclarationListSemanticAction() {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslProgram * program = calloc(1, sizeof(DslProgram));
+	return program;
+}
+
+DslProgram * MainDeclarationSemanticAction(DslProgram * program, StatementList * mainBody) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	program->mainBody = mainBody;
+	return program;
+}

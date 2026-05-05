@@ -23,4 +23,8 @@ Factor * ConstantFactorSemanticAction(Constant * constant);
 Factor * ExpressionFactorSemanticAction(Expression * expression);
 Program * ExpressionProgramSemanticAction(Expression * expression);
 
+DslProgram * ProgramSemanticAction(DslProgram * program);
+DslProgram * EmptyDeclarationListSemanticAction();
+DslProgram * MainDeclarationSemanticAction(DslProgram * program, StatementList * mainBody);
+
 #endif

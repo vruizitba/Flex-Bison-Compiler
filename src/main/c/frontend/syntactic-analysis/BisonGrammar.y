@@ -100,7 +100,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %token AND OR NOT
 %token DOT ARROW AMPERSAND
 %token OPEN_PARENTHESIS CLOSE_PARENTHESIS
-%token OPEN_BRACE CLOSE_BRACE
+%token OPEN_BRACE CLOSE_BRACE	
 %token OPEN_BRACKET CLOSE_BRACKET
 %token COMMA SEMICOLON
 %token CLOSE_COMMENT
@@ -114,7 +114,9 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %type <constant> constant
 %type <expression> expression
 %type <factor> factor
-%type <program> program
+
+/** Root non-terminal. */
+%type <dslProgram> program
 
 /** Non-terminals (DSL). */
 %type <dslProgram> declarationList
@@ -164,21 +166,17 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 
 // IMPORTANT: To use λ in the following grammar, use the %empty symbol.
 
-program: expression											{ $$ = ExpressionProgramSemanticAction($1); }
+program: declarationList								{ $$ = ProgramSemanticAction($1); }
 	;
 
-expression: expression[left] ADD expression[right]			{ $$ = ArithmeticExpressionSemanticAction($left, $right, ADDITION); }
-	| expression[left] DIVIDE expression[right]						{ $$ = ArithmeticExpressionSemanticAction($left, $right, DIVISION); }
-	| expression[left] ASTERISK expression[right]					{ $$ = ArithmeticExpressionSemanticAction($left, $right, MULTIPLICATION); }
-	| expression[left] SUBTRACT expression[right]					{ $$ = ArithmeticExpressionSemanticAction($left, $right, SUBTRACTION); }
-	| factor																							{ $$ = FactorExpressionSemanticAction($1); }
+declarationList: %empty									{ $$ = EmptyDeclarationListSemanticAction(); }
+	| declarationList mainDeclaration					{ $$ = MainDeclarationSemanticAction($1, $2); }
 	;
 
-factor: OPEN_PARENTHESIS expression CLOSE_PARENTHESIS		{ $$ = ExpressionFactorSemanticAction($2); }
-	| constant																						{ $$ = ConstantFactorSemanticAction($1); }
+mainDeclaration: MAIN OPEN_BRACE statementList CLOSE_BRACE	{ $$ = $3; }
 	;
 
-constant: INTEGER											{ $$ = IntegerConstantSemanticAction($1); }
+statementList: %empty									{ $$ = NULL; }
 	;
 
 %%
