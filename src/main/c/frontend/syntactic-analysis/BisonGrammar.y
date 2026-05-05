@@ -30,14 +30,27 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 	signed int integer;
 	double real;
 	char * string;
-	TokenLabel token;
 
-	/** Non-terminals. */
+	/** Non-terminals (old calculator kept until grammar rules are replaced). */
 
 	Constant * constant;
 	Expression * expression;
 	Factor * factor;
 	Program * program;
+
+	/** Non-terminals (DSL). */
+
+	DslProgram * dslProgram;
+	Class * classNode;
+	Field * field;
+	Method * method;
+	Parameter * parameter;
+	DslStatement * statement;
+	StatementList * statementList;
+	DslExpression * dslExpression;
+	ArgumentList * argumentList;
+	Type * type;
+	Function * function;
 }
 
 /**
@@ -51,6 +64,18 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %destructor { destroyConstant($$); } <constant>
 %destructor { destroyExpression($$); } <expression>
 %destructor { destroyFactor($$); } <factor>
+
+%destructor { destroyDslExpression($$); } <dslExpression>
+%destructor { destroyDslStatement($$); } <statement>
+%destructor { destroyStatementList($$); } <statementList>
+%destructor { destroyArgumentList($$); } <argumentList>
+%destructor { destroyType($$); } <type>
+%destructor { destroyField($$); } <field>
+%destructor { destroyMethod($$); } <method>
+%destructor { destroyClass($$); } <classNode>
+%destructor { destroyFunction($$); } <function>
+%destructor { destroyDslProgram($$); } <dslProgram>
+%destructor { destroyParameter($$); } <parameter>
 
 %destructor { free($$); } <string>
 
@@ -84,11 +109,38 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %token IGNORED
 %token UNKNOWN
 
-/** Non-terminals. */
+
+/** Non-terminals (old calculator kept until grammar rules are replaced). */
 %type <constant> constant
 %type <expression> expression
 %type <factor> factor
 %type <program> program
+
+/** Non-terminals (DSL). */
+%type <dslProgram> declarationList
+%type <classNode> classDeclaration
+%type <function> functionDeclaration
+%type <statementList> mainDeclaration
+
+%type <type> type baseType typeModifierList typeModifier
+
+%type <string> extendsOptional
+%type <classNode> memberList member
+%type <field> fieldDeclaration
+%type <integer> visibility staticOptional
+%type <dslExpression> initializerOptional
+%type <method> methodDeclaration constructorDeclaration
+%type <parameter> parameterList parameter
+
+%type <statementList> block statementList
+%type <statement> statement variableDeclaration expressionStatement
+%type <statement> returnStatement ifStatement whileStatement forStatement forInitializer
+%type <dslExpression> expressionOptional
+
+%type <dslExpression> assignmentExpression logicalOrExpression logicalAndExpression
+%type <dslExpression> equalityExpression relationalExpression additiveExpression
+%type <dslExpression> multiplicativeExpression unaryExpression postfixExpression primaryExpression
+%type <argumentList> argumentList
 
 /**
  * Precedence and associativity.
@@ -97,8 +149,16 @@ void yyerror(const YYLTYPE * location, const char * message) {}
  * @see https://www.gnu.org/software/bison/manual/html_node/Precedence.html
  */
 
+%nonassoc ELSE
+%right ASSIGN PLUS_ASSIGN MINUS_ASSIGN ASTERISK_ASSIGN DIVIDE_ASSIGN MODULO_ASSIGN
+%left OR
+%left AND
+%left EQUAL NOT_EQUAL
+%left LESS GREATER LESS_EQUAL GREATER_EQUAL
 %left ADD SUBTRACT
-%left ASTERISK DIVIDE
+%left ASTERISK DIVIDE MODULO
+%right NOT
+%left DOT ARROW OPEN_BRACKET OPEN_PARENTHESIS
 
 %%
 

@@ -15,7 +15,7 @@
  */
 
 extern CompilationStatus OperatorLexemeAction(TokenLabel label);
-/* extern CompilationStatus EnterImportExpressionLexemeAction(FlexContext context); */
+//extern CompilationStatus EnterImportExpressionLexemeAction(FlexContext context);
 extern CompilationStatus EnterMultilineCommentLexemeAction(FlexContext context);
 extern CompilationStatus EOFLexemeAction();
 extern CompilationStatus IgnoredLexemeAction();
