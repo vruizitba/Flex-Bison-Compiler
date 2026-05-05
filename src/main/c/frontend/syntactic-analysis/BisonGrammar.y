@@ -84,7 +84,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %token <string> IDENTIFIER
 %token <string> STRING
 %token <integer> INTEGER
-%token <real> FLOAT
+%token <real> REAL
 
 %token TYPE_INT TYPE_BOOL TYPE_STRING TYPE_CHAR TYPE_FLOAT TYPE_DOUBLE TYPE_VOID
 %token SIGNED UNSIGNED SHORT LONG

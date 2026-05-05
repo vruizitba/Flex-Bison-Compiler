@@ -128,7 +128,7 @@ CompilationStatus LeaveStringLiteralLexemeAction() {
 }
 
 CompilationStatus FloatLexemeAction() {
-	Token * token = createToken(_lexicalAnalyzer, FLOAT);
+	Token * token = createToken(_lexicalAnalyzer, REAL);
 	token->semanticValue->real = atof(token->lexeme);
 	_logTokenAction(__FUNCTION__, token);
 	CompilationStatus status = pushToken(_lexicalAnalyzer, token);
