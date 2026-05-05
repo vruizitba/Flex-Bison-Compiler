@@ -179,4 +179,31 @@ mainDeclaration: MAIN OPEN_BRACE statementList CLOSE_BRACE	{ $$ = $3; }
 statementList: %empty									{ $$ = NULL; }
 	;
 
+type: baseType											{ $$ = $1; }
+	| typeModifierList baseType							{ $$ = ModifiedTypeSemanticAction($1, $2); }
+	| type ASTERISK										{ $$ = PointerTypeSemanticAction($1); }
+	| type OPEN_BRACKET INTEGER CLOSE_BRACKET			{ $$ = ArrayTypeSemanticAction($1, $3); }
+	| type OPEN_BRACKET CLOSE_BRACKET					{ $$ = ArrayTypeNoSizeSemanticAction($1); }
+	| IDENTIFIER										{ $$ = ClassTypeSemanticAction($1); }
+	;
+
+typeModifierList: typeModifier							{ $$ = $1; }
+	| typeModifierList typeModifier						{ $$ = MergeTypeModifiersSemanticAction($1, $2); }
+	;
+
+typeModifier: SIGNED									{ $$ = TypeModifierSemanticAction(1, 0, 0, 0); }
+	| UNSIGNED											{ $$ = TypeModifierSemanticAction(0, 1, 0, 0); }
+	| SHORT												{ $$ = TypeModifierSemanticAction(0, 0, 1, 0); }
+	| LONG												{ $$ = TypeModifierSemanticAction(0, 0, 0, 1); }
+	;
+
+baseType: TYPE_INT										{ $$ = BaseTypeSemanticAction(TYPEKIND_INT); }
+	| TYPE_BOOL											{ $$ = BaseTypeSemanticAction(TYPEKIND_BOOL); }
+	| TYPE_STRING										{ $$ = BaseTypeSemanticAction(TYPEKIND_STRING); }
+	| TYPE_CHAR											{ $$ = BaseTypeSemanticAction(TYPEKIND_CHAR); }
+	| TYPE_FLOAT										{ $$ = BaseTypeSemanticAction(TYPEKIND_FLOAT); }
+	| TYPE_DOUBLE										{ $$ = BaseTypeSemanticAction(TYPEKIND_DOUBLE); }
+	| TYPE_VOID											{ $$ = BaseTypeSemanticAction(TYPEKIND_VOID); }
+	;
+
 %%

@@ -27,4 +27,13 @@ DslProgram * ProgramSemanticAction(DslProgram * program);
 DslProgram * EmptyDeclarationListSemanticAction();
 DslProgram * MainDeclarationSemanticAction(DslProgram * program, StatementList * mainBody);
 
+Type * BaseTypeSemanticAction(TypeKind kind);
+Type * TypeModifierSemanticAction(char isSigned, char isUnsigned, char isShort, char isLong);
+Type * MergeTypeModifiersSemanticAction(Type * list, Type * modifier);
+Type * ModifiedTypeSemanticAction(Type * modifiers, Type * base);
+Type * PointerTypeSemanticAction(Type * inner);
+Type * ArrayTypeSemanticAction(Type * inner, int size);
+Type * ArrayTypeNoSizeSemanticAction(Type * inner);
+Type * ClassTypeSemanticAction(char * name);
+
 #endif

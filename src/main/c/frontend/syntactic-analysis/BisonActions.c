@@ -101,3 +101,74 @@ DslProgram * MainDeclarationSemanticAction(DslProgram * program, StatementList *
 	program->mainBody = mainBody;
 	return program;
 }
+
+Type * BaseTypeSemanticAction(TypeKind kind) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	Type * type = calloc(1, sizeof(Type));
+	type->kind = kind;
+	return type;
+}
+
+Type * TypeModifierSemanticAction(char isSigned, char isUnsigned, char isShort, char isLong) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	Type * type = calloc(1, sizeof(Type));
+	type->isSigned = isSigned;
+	type->isUnsigned = isUnsigned;
+	type->isShort = isShort;
+	type->isLong = isLong;
+	return type;
+}
+
+Type * MergeTypeModifiersSemanticAction(Type * list, Type * modifier) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	list->isSigned |= modifier->isSigned;
+	list->isUnsigned |= modifier->isUnsigned;
+	list->isShort |= modifier->isShort;
+	list->isLong |= modifier->isLong;
+	free(modifier);
+	return list;
+}
+
+Type * ModifiedTypeSemanticAction(Type * modifiers, Type * base) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	base->isSigned = modifiers->isSigned;
+	base->isUnsigned = modifiers->isUnsigned;
+	base->isShort = modifiers->isShort;
+	base->isLong = modifiers->isLong;
+	free(modifiers);
+	return base;
+}
+
+Type * PointerTypeSemanticAction(Type * inner) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	Type * type = calloc(1, sizeof(Type));
+	type->kind = TYPEKIND_POINTER;
+	type->inner = inner;
+	return type;
+}
+
+Type * ArrayTypeSemanticAction(Type * inner, int size) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	Type * type = calloc(1, sizeof(Type));
+	type->kind = TYPEKIND_ARRAY;
+	type->inner = inner;
+	type->arraySize = size;
+	return type;
+}
+
+Type * ArrayTypeNoSizeSemanticAction(Type * inner) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	Type * type = calloc(1, sizeof(Type));
+	type->kind = TYPEKIND_ARRAY;
+	type->inner = inner;
+	type->arraySize = -1;
+	return type;
+}
+	
+Type * ClassTypeSemanticAction(char * name) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	Type * type = calloc(1, sizeof(Type));
+	type->kind = TYPEKIND_CLASS;
+	type->className = name;
+	return type;
+}
