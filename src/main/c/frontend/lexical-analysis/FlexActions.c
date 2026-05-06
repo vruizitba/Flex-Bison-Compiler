@@ -119,6 +119,9 @@ CompilationStatus LeaveStringLiteralLexemeAction() {
 	leaveLexicalAnalyzerContext(_lexicalAnalyzer);
 	Token * token = createToken(_lexicalAnalyzer, STRING);
 	token->semanticValue->string = _stringBuffer;
+	free(token->lexeme);
+	token->lexeme = strdup(_stringBuffer);
+	token->length = _stringBufferLength;
 	_stringBuffer = NULL;
 	_stringBufferLength = 0;
 	_logTokenAction(__FUNCTION__, token);

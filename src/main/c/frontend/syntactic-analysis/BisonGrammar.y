@@ -74,7 +74,6 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %destructor { destroyMethod($$); } <method>
 %destructor { destroyClass($$); } <classNode>
 %destructor { destroyFunction($$); } <function>
-%destructor { destroyDslProgram($$); } <dslProgram>
 %destructor { destroyParameter($$); } <parameter>
 
 %destructor { free($$); } <string>
