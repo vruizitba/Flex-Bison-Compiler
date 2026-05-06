@@ -43,6 +43,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 	DslProgram * dslProgram;
 	Class * classNode;
 	MemberList * memberList;
+	MemberSuffix * memberSuffix;
 	Field * field;
 	Method * method;
 	Parameter * parameter;
@@ -75,6 +76,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %destructor { destroyMethod($$); } <method>
 %destructor { destroyClass($$); } <classNode>
 %destructor { destroyMemberList($$); } <memberList>
+%destructor { destroyMemberSuffix($$); } <memberSuffix>
 %destructor { destroyFunction($$); } <function>
 %destructor { destroyParameter($$); } <parameter>
 
@@ -128,12 +130,12 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %type <type> type baseType typeModifierList typeModifier
 
 %type <string> extendsOptional
-%type <memberList> memberList
-%type <field> fieldDeclaration
-%type <integer> visibility staticOptional
+%type <memberList> memberList member memberAfterVisibility
+%type <memberSuffix> memberAfterIdentifier memberTail
+%type <integer> visibility
 %type <dslExpression> initializerOptional
-%type <method> methodDeclaration constructorDeclaration
-%type <parameter> parameterList parameter
+%type <parameter> parameterList nonEmptyParamList parameter
+%type <type> primitiveType classTypeTail
 
 %type <statementList> block statementList
 %type <statement> statement variableDeclaration expressionStatement
@@ -173,9 +175,15 @@ program: declarationList								{ $$ = ProgramSemanticAction($1); }
 declarationList: %empty									{ $$ = EmptyDeclarationListSemanticAction(); }
 	| declarationList mainDeclaration					{ $$ = MainDeclarationSemanticAction($1, $2); }
 	| declarationList classDeclaration					{ $$ = AddClassSemanticAction($1, $2); }
+	| declarationList functionDeclaration				{ $$ = AddFunctionSemanticAction($1, $2); }
 	;
 
 mainDeclaration: MAIN OPEN_BRACE statementList CLOSE_BRACE	{ $$ = $3; }
+	;
+
+functionDeclaration: FUNCTION type IDENTIFIER
+		OPEN_PARENTHESIS parameterList CLOSE_PARENTHESIS block
+		{ $$ = FunctionSemanticAction($2, $3, $5, $7); }
 	;
 
 statementList: %empty									{ $$ = NULL; }
@@ -190,11 +198,49 @@ extendsOptional: %empty									{ $$ = NULL; }
 	;
 
 memberList: %empty										{ $$ = NULL; }
-	| memberList fieldDeclaration						{ $$ = AppendFieldSemanticAction($1, $2); }
+	| memberList member									{ $$ = MergeMemberListsSemanticAction($1, $2); }
 	;
 
-fieldDeclaration: visibility staticOptional type IDENTIFIER SEMICOLON
-		{ $$ = FieldSemanticAction($1, $2, $3, $4); }
+member: visibility memberAfterVisibility				{ $$ = SetMemberVisibilitySemanticAction($2, $1); }
+	;
+
+memberAfterVisibility:
+	  STATIC type IDENTIFIER memberTail					{ $$ = BuildMemberSemanticAction(1, $2, $3, $4); }
+	| primitiveType IDENTIFIER memberTail				{ $$ = BuildMemberSemanticAction(0, $1, $2, $3); }
+	| IDENTIFIER memberAfterIdentifier					{ $$ = BuildMemberFromIdentifierSemanticAction($1, $2); }
+	;
+
+memberAfterIdentifier:
+	  OPEN_PARENTHESIS parameterList CLOSE_PARENTHESIS block
+		{ $$ = ConstructorSuffixSemanticAction($2, $4); }
+	| classTypeTail IDENTIFIER memberTail
+		{ $$ = ClassMemberSuffixSemanticAction($1, $2, $3); }
+	;
+
+memberTail:
+	  SEMICOLON											{ $$ = FieldTailSemanticAction(); }
+	| OPEN_PARENTHESIS parameterList CLOSE_PARENTHESIS block
+		{ $$ = MethodTailSemanticAction($2, $4); }
+	;
+
+classTypeTail: %empty									{ $$ = NULL; }
+	| classTypeTail ASTERISK							{ $$ = PointerTypeSemanticAction($1); }
+	| classTypeTail OPEN_BRACKET INTEGER CLOSE_BRACKET	{ $$ = ArrayTypeSemanticAction($1, $3); }
+	| classTypeTail OPEN_BRACKET CLOSE_BRACKET			{ $$ = ArrayTypeNoSizeSemanticAction($1); }
+	;
+
+block: OPEN_BRACE statementList CLOSE_BRACE				{ $$ = $2; }
+	;
+
+parameterList: %empty									{ $$ = NULL; }
+	| nonEmptyParamList									{ $$ = $1; }
+	;
+
+nonEmptyParamList: parameter							{ $$ = $1; }
+	| nonEmptyParamList COMMA parameter					{ $$ = AppendParameterSemanticAction($1, $3); }
+	;
+
+parameter: type IDENTIFIER								{ $$ = ParameterSemanticAction($1, $2); }
 	;
 
 visibility: PUBLIC										{ $$ = VISIBILITY_PUBLIC; }
@@ -202,16 +248,15 @@ visibility: PUBLIC										{ $$ = VISIBILITY_PUBLIC; }
 	| PROTECTED											{ $$ = VISIBILITY_PROTECTED; }
 	;
 
-staticOptional: %empty									{ $$ = 0; }
-	| STATIC											{ $$ = 1; }
+primitiveType: baseType									{ $$ = $1; }
+	| typeModifierList baseType							{ $$ = ModifiedTypeSemanticAction($1, $2); }
+	| primitiveType ASTERISK							{ $$ = PointerTypeSemanticAction($1); }
+	| primitiveType OPEN_BRACKET INTEGER CLOSE_BRACKET	{ $$ = ArrayTypeSemanticAction($1, $3); }
+	| primitiveType OPEN_BRACKET CLOSE_BRACKET			{ $$ = ArrayTypeNoSizeSemanticAction($1); }
 	;
 
-type: baseType											{ $$ = $1; }
-	| typeModifierList baseType							{ $$ = ModifiedTypeSemanticAction($1, $2); }
-	| type ASTERISK										{ $$ = PointerTypeSemanticAction($1); }
-	| type OPEN_BRACKET INTEGER CLOSE_BRACKET			{ $$ = ArrayTypeSemanticAction($1, $3); }
-	| type OPEN_BRACKET CLOSE_BRACKET					{ $$ = ArrayTypeNoSizeSemanticAction($1); }
-	| IDENTIFIER										{ $$ = ClassTypeSemanticAction($1); }
+type: primitiveType										{ $$ = $1; }
+	| IDENTIFIER classTypeTail							{ $$ = BuildClassTypeSemanticAction($1, $2); }
 	;
 
 typeModifierList: typeModifier							{ $$ = $1; }

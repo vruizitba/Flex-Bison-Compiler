@@ -133,6 +133,7 @@ typedef struct Class Class;
 typedef struct Function Function;
 typedef struct DslProgram DslProgram;
 typedef struct MemberList MemberList;
+typedef struct MemberSuffix MemberSuffix;
 
 struct Type {
     TypeKind kind;
@@ -286,7 +287,17 @@ struct MemberList {
     Method * methods;
 };
 
+struct MemberSuffix {
+    int isConstructor;
+    int isMethod;
+    Type * typeTail;
+    char * memberName;
+    Parameter * parameters;
+    StatementList * body;
+};
+
 void destroyMemberList(MemberList * memberList);
+void destroyMemberSuffix(MemberSuffix * suffix);
 void destroyField(Field * field);
 void destroyMethod(Method * method);
 void destroyClass(Class * class);

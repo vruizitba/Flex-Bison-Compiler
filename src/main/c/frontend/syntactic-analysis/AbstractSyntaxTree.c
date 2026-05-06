@@ -198,6 +198,17 @@ void destroyMemberList(MemberList * memberList) {
 	free(memberList);
 }
 
+void destroyMemberSuffix(MemberSuffix * suffix) {
+	if (suffix == NULL) {
+		return;
+	}
+	destroyType(suffix->typeTail);
+	free(suffix->memberName);
+	destroyParameter(suffix->parameters);
+	destroyStatementList(suffix->body);
+	free(suffix);
+}
+
 void destroyField(Field * field) {
 	if (field == NULL) {
 		return;

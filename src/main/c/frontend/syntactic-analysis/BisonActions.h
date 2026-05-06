@@ -34,12 +34,25 @@ Type * ModifiedTypeSemanticAction(Type * modifiers, Type * base);
 Type * PointerTypeSemanticAction(Type * inner);
 Type * ArrayTypeSemanticAction(Type * inner, int size);
 Type * ArrayTypeNoSizeSemanticAction(Type * inner);
-Type * ClassTypeSemanticAction(char * name);
+Type * BuildClassTypeSemanticAction(char * className, Type * typeTail);
 
 Class * ClassSemanticAction(char * name, char * parentName, MemberList * members);
 DslProgram * AddClassSemanticAction(DslProgram * program, Class * classNode);
 
-Field * FieldSemanticAction(Visibility visibility, char isStatic, Type * type, char * name);
-MemberList * AppendFieldSemanticAction(MemberList * list, Field * field);
+Parameter * ParameterSemanticAction(Type * type, char * name);
+Parameter * AppendParameterSemanticAction(Parameter * list, Parameter * param);
+
+MemberSuffix * FieldTailSemanticAction();
+MemberSuffix * MethodTailSemanticAction(Parameter * parameters, StatementList * body);
+MemberSuffix * ConstructorSuffixSemanticAction(Parameter * parameters, StatementList * body);
+MemberSuffix * ClassMemberSuffixSemanticAction(Type * typeTail, char * memberName, MemberSuffix * tail);
+
+MemberList * BuildMemberSemanticAction(char isStatic, Type * type, char * name, MemberSuffix * tail);
+MemberList * BuildMemberFromIdentifierSemanticAction(char * outerIdentifier, MemberSuffix * suffix);
+MemberList * SetMemberVisibilitySemanticAction(MemberList * list, Visibility visibility);
+MemberList * MergeMemberListsSemanticAction(MemberList * dst, MemberList * src);
+
+Function * FunctionSemanticAction(Type * returnType, char * name, Parameter * parameters, StatementList * body);
+DslProgram * AddFunctionSemanticAction(DslProgram * program, Function * function);
 
 #endif
