@@ -128,7 +128,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %type <type> type baseType typeModifierList typeModifier
 
 %type <string> extendsOptional
-%type <memberList> memberList member
+%type <memberList> memberList
 %type <field> fieldDeclaration
 %type <integer> visibility staticOptional
 %type <dslExpression> initializerOptional
@@ -190,6 +190,20 @@ extendsOptional: %empty									{ $$ = NULL; }
 	;
 
 memberList: %empty										{ $$ = NULL; }
+	| memberList fieldDeclaration						{ $$ = AppendFieldSemanticAction($1, $2); }
+	;
+
+fieldDeclaration: visibility staticOptional type IDENTIFIER SEMICOLON
+		{ $$ = FieldSemanticAction($1, $2, $3, $4); }
+	;
+
+visibility: PUBLIC										{ $$ = VISIBILITY_PUBLIC; }
+	| PRIVATE											{ $$ = VISIBILITY_PRIVATE; }
+	| PROTECTED											{ $$ = VISIBILITY_PROTECTED; }
+	;
+
+staticOptional: %empty									{ $$ = 0; }
+	| STATIC											{ $$ = 1; }
 	;
 
 type: baseType											{ $$ = $1; }

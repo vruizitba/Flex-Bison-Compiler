@@ -186,6 +186,34 @@ Class * ClassSemanticAction(char * name, char * parentName, MemberList * members
 	return classNode;
 }
 
+Field * FieldSemanticAction(Visibility visibility, char isStatic, Type * type, char * name) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	Field * field = calloc(1, sizeof(Field));
+	field->visibility = visibility;
+	field->isStatic = isStatic;
+	field->type = type;
+	field->name = name;
+	return field;
+}
+
+MemberList * AppendFieldSemanticAction(MemberList * list, Field * field) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	if (list == NULL) {
+		list = calloc(1, sizeof(MemberList));
+	}
+	if (list->fields == NULL) {
+		list->fields = field;
+	} else {
+		Field * current = list->fields;
+		while (current->next != NULL) {
+			current = current->next;
+		}
+		current->next = field;
+	}
+	return list;
+}
+
+
 DslProgram * AddClassSemanticAction(DslProgram * program, Class * classNode) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
 	classNode->next = program->classes;

@@ -39,4 +39,7 @@ Type * ClassTypeSemanticAction(char * name);
 Class * ClassSemanticAction(char * name, char * parentName, MemberList * members);
 DslProgram * AddClassSemanticAction(DslProgram * program, Class * classNode);
 
+Field * FieldSemanticAction(Visibility visibility, char isStatic, Type * type, char * name);
+MemberList * AppendFieldSemanticAction(MemberList * list, Field * field);
+
 #endif
