@@ -132,6 +132,7 @@ typedef struct Field Field;
 typedef struct Class Class;
 typedef struct Function Function;
 typedef struct DslProgram DslProgram;
+typedef struct MemberList MemberList;
 
 struct Type {
     TypeKind kind;
@@ -280,6 +281,12 @@ struct DslProgram {
     StatementList * mainBody;
 };
 
+struct MemberList {
+    Field * fields;
+    Method * methods;
+};
+
+void destroyMemberList(MemberList * memberList);
 void destroyField(Field * field);
 void destroyMethod(Method * method);
 void destroyClass(Class * class);

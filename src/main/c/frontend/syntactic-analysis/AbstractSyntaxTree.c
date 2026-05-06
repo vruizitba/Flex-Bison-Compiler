@@ -189,6 +189,15 @@ void destroyParameter(Parameter * parameter) {
 	free(parameter);
 }
 
+void destroyMemberList(MemberList * memberList) {
+	if (memberList == NULL) {
+		return;
+	}
+	destroyField(memberList->fields);
+	destroyMethod(memberList->methods);
+	free(memberList);
+}
+
 void destroyField(Field * field) {
 	if (field == NULL) {
 		return;

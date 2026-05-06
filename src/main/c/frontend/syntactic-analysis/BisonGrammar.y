@@ -42,6 +42,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 
 	DslProgram * dslProgram;
 	Class * classNode;
+	MemberList * memberList;
 	Field * field;
 	Method * method;
 	Parameter * parameter;
@@ -73,6 +74,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %destructor { destroyField($$); } <field>
 %destructor { destroyMethod($$); } <method>
 %destructor { destroyClass($$); } <classNode>
+%destructor { destroyMemberList($$); } <memberList>
 %destructor { destroyFunction($$); } <function>
 %destructor { destroyParameter($$); } <parameter>
 
@@ -126,7 +128,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %type <type> type baseType typeModifierList typeModifier
 
 %type <string> extendsOptional
-%type <classNode> memberList member
+%type <memberList> memberList member
 %type <field> fieldDeclaration
 %type <integer> visibility staticOptional
 %type <dslExpression> initializerOptional
@@ -170,12 +172,24 @@ program: declarationList								{ $$ = ProgramSemanticAction($1); }
 
 declarationList: %empty									{ $$ = EmptyDeclarationListSemanticAction(); }
 	| declarationList mainDeclaration					{ $$ = MainDeclarationSemanticAction($1, $2); }
+	| declarationList classDeclaration					{ $$ = AddClassSemanticAction($1, $2); }
 	;
 
 mainDeclaration: MAIN OPEN_BRACE statementList CLOSE_BRACE	{ $$ = $3; }
 	;
 
 statementList: %empty									{ $$ = NULL; }
+	;
+
+classDeclaration: CLASS IDENTIFIER extendsOptional OPEN_BRACE memberList CLOSE_BRACE
+		{ $$ = ClassSemanticAction($2, $3, $5); }
+	;
+
+extendsOptional: %empty									{ $$ = NULL; }
+	| EXTENDS IDENTIFIER								{ $$ = $2; }
+	;
+
+memberList: %empty										{ $$ = NULL; }
 	;
 
 type: baseType											{ $$ = $1; }

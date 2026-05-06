@@ -36,4 +36,7 @@ Type * ArrayTypeSemanticAction(Type * inner, int size);
 Type * ArrayTypeNoSizeSemanticAction(Type * inner);
 Type * ClassTypeSemanticAction(char * name);
 
+Class * ClassSemanticAction(char * name, char * parentName, MemberList * members);
+DslProgram * AddClassSemanticAction(DslProgram * program, Class * classNode);
+
 #endif

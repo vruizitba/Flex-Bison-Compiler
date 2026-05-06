@@ -172,3 +172,23 @@ Type * ClassTypeSemanticAction(char * name) {
 	type->className = name;
 	return type;
 }
+
+Class * ClassSemanticAction(char * name, char * parentName, MemberList * members) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	Class * classNode = calloc(1, sizeof(Class));
+	classNode->name = name;
+	classNode->parentName = parentName;
+	if (members != NULL) {
+		classNode->fields = members->fields;
+		classNode->methods = members->methods;
+		free(members);
+	}
+	return classNode;
+}
+
+DslProgram * AddClassSemanticAction(DslProgram * program, Class * classNode) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	classNode->next = program->classes;
+	program->classes = classNode;
+	return program;
+}
