@@ -140,7 +140,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %type <statementList> block statementList
 %type <statement> statement variableDeclaration expressionStatement
 %type <statement> returnStatement ifStatement whileStatement forStatement forInitializer
-%type <dslExpression> expressionOptional
+%type <dslExpression> expressionOptional dslExpression
 
 %type <dslExpression> assignmentExpression logicalOrExpression logicalAndExpression
 %type <dslExpression> equalityExpression relationalExpression additiveExpression
@@ -187,6 +187,7 @@ functionDeclaration: FUNCTION type IDENTIFIER
 	;
 
 statementList: %empty									{ $$ = NULL; }
+	| statementList statement							{ $$ = AppendStatementSemanticAction($1, $2); }
 	;
 
 classDeclaration: CLASS IDENTIFIER extendsOptional OPEN_BRACE memberList CLOSE_BRACE
@@ -230,6 +231,29 @@ classTypeTail: %empty									{ $$ = NULL; }
 	;
 
 block: OPEN_BRACE statementList CLOSE_BRACE				{ $$ = $2; }
+	;
+
+statement: variableDeclaration							{ $$ = $1; }
+	| returnStatement									{ $$ = $1; }
+	| expressionStatement								{ $$ = $1; }
+	| block												{ $$ = BlockStatementSemanticAction($1); }
+	;
+
+variableDeclaration: type IDENTIFIER SEMICOLON			{ $$ = VariableDeclarationSemanticAction($1, $2, NULL); }
+	| type IDENTIFIER ASSIGN dslExpression SEMICOLON	{ $$ = VariableDeclarationSemanticAction($1, $2, $4); }
+	;
+
+returnStatement: RETURN expressionOptional SEMICOLON	{ $$ = ReturnStatementSemanticAction($2); }
+	;
+
+expressionStatement: dslExpression SEMICOLON			{ $$ = ExpressionStatementSemanticAction($1); }
+	;
+
+expressionOptional: %empty								{ $$ = NULL; }
+	| dslExpression										{ $$ = $1; }
+	;
+
+dslExpression: %empty									{ $$ = NULL; }
 	;
 
 parameterList: %empty									{ $$ = NULL; }

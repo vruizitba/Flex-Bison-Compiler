@@ -55,4 +55,10 @@ MemberList * MergeMemberListsSemanticAction(MemberList * dst, MemberList * src);
 Function * FunctionSemanticAction(Type * returnType, char * name, Parameter * parameters, StatementList * body);
 DslProgram * AddFunctionSemanticAction(DslProgram * program, Function * function);
 
+StatementList * AppendStatementSemanticAction(StatementList * list, DslStatement * stmt);
+DslStatement * VariableDeclarationSemanticAction(Type * type, char * name, DslExpression * initializer);
+DslStatement * ReturnStatementSemanticAction(DslExpression * value);
+DslStatement * ExpressionStatementSemanticAction(DslExpression * expr);
+DslStatement * BlockStatementSemanticAction(StatementList * body);
+
 #endif

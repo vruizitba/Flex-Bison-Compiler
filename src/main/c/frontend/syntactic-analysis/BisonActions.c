@@ -385,3 +385,52 @@ DslProgram * AddFunctionSemanticAction(DslProgram * program, Function * function
 	program->functions = function;
 	return program;
 }
+
+DslStatement * VariableDeclarationSemanticAction(Type * type, char * name, DslExpression * initializer) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslStatement * stmt = calloc(1, sizeof(DslStatement));
+	stmt->kind = STATEMENT_VARIABLE_DECLARATION;
+	stmt->variableDeclaration.type = type;
+	stmt->variableDeclaration.name = name;
+	stmt->variableDeclaration.initializer = initializer;
+	return stmt;
+}
+
+DslStatement * ReturnStatementSemanticAction(DslExpression * value) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslStatement * stmt = calloc(1, sizeof(DslStatement));
+	stmt->kind = STATEMENT_RETURN;
+	stmt->returnStatement.value = value;
+	return stmt;
+}
+
+StatementList * AppendStatementSemanticAction(StatementList * list, DslStatement * stmt) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	StatementList * node = calloc(1, sizeof(StatementList));
+	node->statement = stmt;
+	if (list == NULL) {
+		return node;
+	}
+	StatementList * current = list;
+	while (current->next != NULL) {
+		current = current->next;
+	}
+	current->next = node;
+	return list;
+}
+
+DslStatement * ExpressionStatementSemanticAction(DslExpression * expr) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslStatement * stmt = calloc(1, sizeof(DslStatement));
+	stmt->kind = STATEMENT_EXPRESSION;
+	stmt->expressionStatement = expr;
+	return stmt;
+}
+
+DslStatement * BlockStatementSemanticAction(StatementList * body) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslStatement * stmt = calloc(1, sizeof(DslStatement));
+	stmt->kind = STATEMENT_BLOCK;
+	stmt->block = body;
+	return stmt;
+}
