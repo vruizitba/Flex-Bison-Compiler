@@ -57,6 +57,9 @@ DslProgram * AddFunctionSemanticAction(DslProgram * program, Function * function
 
 StatementList * AppendStatementSemanticAction(StatementList * list, DslStatement * stmt);
 DslStatement * VariableDeclarationSemanticAction(Type * type, char * name, DslExpression * initializer);
+DslStatement * IfStatementSemanticAction(DslExpression * condition, DslStatement * thenBranch, DslStatement * elseBranch);
+DslStatement * WhileStatementSemanticAction(DslExpression * condition, DslStatement * body);
+DslStatement * ForStatementSemanticAction(DslStatement * initializer, DslExpression * condition, DslExpression * step, DslStatement * body);
 DslStatement * ReturnStatementSemanticAction(DslExpression * value);
 DslStatement * ExpressionStatementSemanticAction(DslExpression * expr);
 DslStatement * BlockStatementSemanticAction(StatementList * body);

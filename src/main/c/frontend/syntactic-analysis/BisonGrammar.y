@@ -111,6 +111,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 
 %token IGNORED
 %token UNKNOWN
+%token LOWER_THAN_ELSE
 
 
 /** Non-terminals (old calculator kept until grammar rules are replaced). */
@@ -138,7 +139,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %type <type> primitiveType classTypeTail
 
 %type <statementList> block statementList
-%type <statement> statement variableDeclaration expressionStatement
+%type <statement> statement variableDeclaration variableDeclarationBase expressionStatement
 %type <statement> returnStatement ifStatement whileStatement forStatement forInitializer
 %type <dslExpression> expressionOptional dslExpression
 
@@ -154,6 +155,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
  * @see https://www.gnu.org/software/bison/manual/html_node/Precedence.html
  */
 
+%nonassoc LOWER_THAN_ELSE
 %nonassoc ELSE
 %right ASSIGN PLUS_ASSIGN MINUS_ASSIGN ASTERISK_ASSIGN DIVIDE_ASSIGN MODULO_ASSIGN
 %left OR
@@ -234,13 +236,40 @@ block: OPEN_BRACE statementList CLOSE_BRACE				{ $$ = $2; }
 	;
 
 statement: variableDeclaration							{ $$ = $1; }
+	| ifStatement										{ $$ = $1; }
+	| whileStatement									{ $$ = $1; }
+	| forStatement										{ $$ = $1; }
 	| returnStatement									{ $$ = $1; }
 	| expressionStatement								{ $$ = $1; }
 	| block												{ $$ = BlockStatementSemanticAction($1); }
 	;
 
-variableDeclaration: type IDENTIFIER SEMICOLON			{ $$ = VariableDeclarationSemanticAction($1, $2, NULL); }
-	| type IDENTIFIER ASSIGN dslExpression SEMICOLON	{ $$ = VariableDeclarationSemanticAction($1, $2, $4); }
+variableDeclarationBase: type IDENTIFIER initializerOptional	{ $$ = VariableDeclarationSemanticAction($1, $2, $3); }
+	;
+
+variableDeclaration: variableDeclarationBase SEMICOLON	{ $$ = $1; }
+	;
+
+ifStatement: IF OPEN_PARENTHESIS dslExpression CLOSE_PARENTHESIS statement %prec LOWER_THAN_ELSE
+		{ $$ = IfStatementSemanticAction($3, $5, NULL); }
+	| IF OPEN_PARENTHESIS dslExpression CLOSE_PARENTHESIS statement ELSE statement
+		{ $$ = IfStatementSemanticAction($3, $5, $7); }
+	;
+
+whileStatement: WHILE OPEN_PARENTHESIS dslExpression CLOSE_PARENTHESIS statement
+		{ $$ = WhileStatementSemanticAction($3, $5); }
+	;
+
+forStatement: FOR OPEN_PARENTHESIS forInitializer SEMICOLON dslExpression SEMICOLON dslExpression CLOSE_PARENTHESIS statement
+		{ $$ = ForStatementSemanticAction($3, $5, $7, $9); }
+	;
+
+forInitializer: variableDeclarationBase					{ $$ = $1; }
+	| dslExpression										{ $$ = ExpressionStatementSemanticAction($1); }
+	;
+
+initializerOptional: %empty								{ $$ = NULL; }
+	| ASSIGN dslExpression								{ $$ = $2; }
 	;
 
 returnStatement: RETURN expressionOptional SEMICOLON	{ $$ = ReturnStatementSemanticAction($2); }

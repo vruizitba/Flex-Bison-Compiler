@@ -396,6 +396,36 @@ DslStatement * VariableDeclarationSemanticAction(Type * type, char * name, DslEx
 	return stmt;
 }
 
+DslStatement * IfStatementSemanticAction(DslExpression * condition, DslStatement * thenBranch, DslStatement * elseBranch) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslStatement * stmt = calloc(1, sizeof(DslStatement));
+	stmt->kind = STATEMENT_IF;
+	stmt->ifStatement.condition = condition;
+	stmt->ifStatement.thenBranch = thenBranch;
+	stmt->ifStatement.elseBranch = elseBranch;
+	return stmt;
+}
+
+DslStatement * WhileStatementSemanticAction(DslExpression * condition, DslStatement * body) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslStatement * stmt = calloc(1, sizeof(DslStatement));
+	stmt->kind = STATEMENT_WHILE;
+	stmt->whileStatement.condition = condition;
+	stmt->whileStatement.body = body;
+	return stmt;
+}
+
+DslStatement * ForStatementSemanticAction(DslStatement * initializer, DslExpression * condition, DslExpression * step, DslStatement * body) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslStatement * stmt = calloc(1, sizeof(DslStatement));
+	stmt->kind = STATEMENT_FOR;
+	stmt->forStatement.initializer = initializer;
+	stmt->forStatement.condition = condition;
+	stmt->forStatement.step = step;
+	stmt->forStatement.body = body;
+	return stmt;
+}
+
 DslStatement * ReturnStatementSemanticAction(DslExpression * value) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
 	DslStatement * stmt = calloc(1, sizeof(DslStatement));
