@@ -14,6 +14,9 @@ ModuleDestructor initializeAbstractSyntaxTreeModule();
  * person, but without the madness).
  */
 
+
+/* Legacy calculator types — kept for the backend Generator. */
+
 typedef enum ExpressionType ExpressionType;
 typedef enum FactorType FactorType;
 
@@ -21,10 +24,6 @@ typedef struct Constant Constant;
 typedef struct Expression Expression;
 typedef struct Factor Factor;
 typedef struct Program Program;
-
-/**
- * Node types for the Abstract Syntax Tree (AST).
- */
 
 enum ExpressionType {
 	ADDITION,
@@ -67,16 +66,8 @@ struct Program {
 };
 
 /**
- * Node recursive super-duper-trambolik-destructors.
- */
-
-void destroyConstant(Constant * constant);
-void destroyExpression(Expression * expression);
-void destroyFactor(Factor * factor);
-void destroyProgram(Program * program);
-
-/**
- * Our DSL types. For now, we won't delete the previous types.
+ * 
+ * DSL AST node types.
  */
 
 typedef enum {
@@ -105,7 +96,7 @@ typedef enum {
     UNARY_OPERATOR_PRE_INCREMENT, UNARY_OPERATOR_PRE_DECREMENT,
     UNARY_OPERATOR_POST_INCREMENT, UNARY_OPERATOR_POST_DECREMENT,
     UNARY_OPERATOR_DEREFERENCE, UNARY_OPERATOR_ADDRESS_OF
-} DslUnaryOperator;
+} UnaryOperator;
 
 typedef enum {
     EXPRESSION_INTEGER, EXPRESSION_FLOAT, EXPRESSION_STRING,
@@ -123,7 +114,7 @@ typedef enum {
 
 typedef struct Type Type;
 typedef struct DslExpression DslExpression;
-typedef struct DslStatement DslStatement;
+typedef struct Statement Statement;
 typedef struct Parameter Parameter;
 typedef struct StatementList StatementList;
 typedef struct ArgumentList ArgumentList;
@@ -163,7 +154,7 @@ struct DslExpression {
             DslExpression * right;
         } binary;
         struct {
-            DslUnaryOperator operator;
+            UnaryOperator operator;
             DslExpression * operand;
         } unary;
         struct {
@@ -187,7 +178,7 @@ struct DslExpression {
 
 void destroyDslExpression(DslExpression * expression);
 
-struct DslStatement {
+struct Statement {
     StatementKind kind;
     union {
         struct {
@@ -198,18 +189,18 @@ struct DslStatement {
         DslExpression * expressionStatement;
         struct {
             DslExpression * condition;
-            DslStatement * thenBranch;
-            DslStatement * elseBranch;      // NULL if no else
+            Statement * thenBranch;
+            Statement * elseBranch;      // NULL if no else
         } ifStatement;
         struct {
             DslExpression * condition;
-            DslStatement * body;
+            Statement * body;
         } whileStatement;
         struct {
-            DslStatement * initializer;     // NULL if empty
+            Statement * initializer;     // NULL if empty
             DslExpression * condition;
             DslExpression * step;
-            DslStatement * body;
+            Statement * body;
         } forStatement;
         struct {
             DslExpression * value;          // NULL for bare return;
@@ -218,10 +209,10 @@ struct DslStatement {
     };
 };
 
-void destroyDslStatement(DslStatement * statement);
+void destroyStatement(Statement * statement);
 
 struct StatementList {
-    DslStatement * statement;
+    Statement * statement;
     StatementList * next;
 };
 

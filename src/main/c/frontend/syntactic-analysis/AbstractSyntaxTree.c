@@ -20,59 +20,6 @@ ModuleDestructor initializeAbstractSyntaxTreeModule() {
 
 /* PUBLIC FUNCTIONS */
 
-void destroyConstant(Constant * constant) {
-	logDebugging(_logger, "Executing destructor: %s", __FUNCTION__);
-	if (constant != NULL) {
-		free(constant);
-	}
-}
-
-void destroyExpression(Expression * expression) {
-	logDebugging(_logger, "Executing destructor: %s", __FUNCTION__);
-	if (expression != NULL) {
-		switch (expression->type) {
-			case ADDITION:
-			case DIVISION:
-			case MULTIPLICATION:
-			case SUBTRACTION:
-				destroyExpression(expression->leftExpression);
-				destroyExpression(expression->rightExpression);
-				break;
-			case FACTOR:
-				destroyFactor(expression->factor);
-				break;
-		}
-		free(expression);
-	}
-}
-
-void destroyFactor(Factor * factor) {
-	logDebugging(_logger, "Executing destructor: %s", __FUNCTION__);
-	if (factor != NULL) {
-		switch (factor->type) {
-			case CONSTANT:
-				destroyConstant(factor->constant);
-				break;
-			case EXPRESSION:
-				destroyExpression(factor->expression);
-				break;
-		}
-		free(factor);
-	}
-}
-
-void destroyProgram(Program * program) {
-	logDebugging(_logger, "Executing destructor: %s", __FUNCTION__);
-	if (program != NULL) {
-		destroyExpression(program->expression);
-		free(program);
-	}
-}
-
-/**
- * Our DSL types destructors. For now, we won't delete the previous ones.
- */
-
 void destroyType(Type * type) {
 	if (type == NULL) {
 		return;
@@ -123,7 +70,7 @@ void destroyDslExpression(DslExpression * expression) {
 	free(expression);
 }
 
-void destroyDslStatement(DslStatement * statement) {
+void destroyStatement(Statement * statement) {
 	if (statement == NULL) {
 		return;
 	}
@@ -138,18 +85,18 @@ void destroyDslStatement(DslStatement * statement) {
 			break;
 		case STATEMENT_IF:
 			destroyDslExpression(statement->ifStatement.condition);
-			destroyDslStatement(statement->ifStatement.thenBranch);
-			destroyDslStatement(statement->ifStatement.elseBranch);
+			destroyStatement(statement->ifStatement.thenBranch);
+			destroyStatement(statement->ifStatement.elseBranch);
 			break;
 		case STATEMENT_WHILE:
 			destroyDslExpression(statement->whileStatement.condition);
-			destroyDslStatement(statement->whileStatement.body);
+			destroyStatement(statement->whileStatement.body);
 			break;
 		case STATEMENT_FOR:
-			destroyDslStatement(statement->forStatement.initializer);
+			destroyStatement(statement->forStatement.initializer);
 			destroyDslExpression(statement->forStatement.condition);
 			destroyDslExpression(statement->forStatement.step);
-			destroyDslStatement(statement->forStatement.body);
+			destroyStatement(statement->forStatement.body);
 			break;
 		case STATEMENT_RETURN:
 			destroyDslExpression(statement->returnStatement.value);
@@ -165,7 +112,7 @@ void destroyStatementList(StatementList * list) {
 	if (list == NULL) {
 		return;
 	}
-	destroyDslStatement(list->statement);
+	destroyStatement(list->statement);
 	destroyStatementList(list->next);
 	free(list);
 }

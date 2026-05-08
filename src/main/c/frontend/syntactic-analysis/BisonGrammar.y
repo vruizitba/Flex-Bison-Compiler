@@ -23,6 +23,23 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %define parse.error detailed
 %locations
 
+/**
+ * Expected reduce/reduce conflict: classic C-style ambiguity between a
+ * class type name and a variable name when a statement starts with
+ * IDENTIFIER followed by ASTERISK or OPEN_BRACKET.
+ *
+ * Example: given the input "x * y;" the parser cannot decide between
+ *   - pointer declaration: "x" is the pointer type, "y" is the variable
+ *   - expression: multiplication "x * y"
+ *
+ * With a single token of lookahead, they cannot be distinguished.
+ * Bison's default resolution: rule declared first wins
+ * In this case, picks the declaration path "classTypeTail: %empty".
+ *
+ * Accepted as a Stage II false positive.
+ * Stage III must resolve this via semantic analysis.
+ */
+
 %union {
 	/** Terminals. */
 
@@ -31,14 +48,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 	double real;
 	char * string;
 
-	/** Non-terminals (old calculator kept until grammar rules are replaced). */
-
-	Constant * constant;
-	Expression * expression;
-	Factor * factor;
-	Program * program;
-
-	/** Non-terminals (DSL). */
+	/** Non-terminals. */
 
 	DslProgram * dslProgram;
 	Class * classNode;
@@ -47,7 +57,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 	Field * field;
 	Method * method;
 	Parameter * parameter;
-	DslStatement * statement;
+	Statement * statement;
 	StatementList * statementList;
 	DslExpression * dslExpression;
 	ArgumentList * argumentList;
@@ -63,12 +73,8 @@ void yyerror(const YYLTYPE * location, const char * message) {}
  *
  * @see https://www.gnu.org/software/bison/manual/html_node/Destructor-Decl.html
  */
-%destructor { destroyConstant($$); } <constant>
-%destructor { destroyExpression($$); } <expression>
-%destructor { destroyFactor($$); } <factor>
-
 %destructor { destroyDslExpression($$); } <dslExpression>
-%destructor { destroyDslStatement($$); } <statement>
+%destructor { destroyStatement($$); } <statement>
 %destructor { destroyStatementList($$); } <statementList>
 %destructor { destroyArgumentList($$); } <argumentList>
 %destructor { destroyType($$); } <type>
@@ -115,15 +121,10 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %token NEGATE PRE_INCREMENT PRE_DECREMENT POST_INCREMENT POST_DECREMENT DEREFERENCE ADDRESS_OF
 
 
-/** Non-terminals (old calculator kept until grammar rules are replaced). */
-%type <constant> constant
-%type <expression> expression
-%type <factor> factor
-
 /** Root non-terminal. */
 %type <dslProgram> program
 
-/** Non-terminals (DSL). */
+/** Non-terminals. */
 %type <dslProgram> declarationList
 %type <classNode> classDeclaration
 %type <function> functionDeclaration
