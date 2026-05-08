@@ -55,6 +55,28 @@ MemberList * MergeMemberListsSemanticAction(MemberList * dst, MemberList * src);
 Function * FunctionSemanticAction(Type * returnType, char * name, Parameter * parameters, StatementList * body);
 DslProgram * AddFunctionSemanticAction(DslProgram * program, Function * function);
 
+DslExpression * IntegerExpressionSemanticAction(int value);
+DslExpression * FloatExpressionSemanticAction(double value);
+DslExpression * StringExpressionSemanticAction(char * value);
+DslExpression * CharExpressionSemanticAction(char value);
+DslExpression * BooleanExpressionSemanticAction(int value);
+DslExpression * IdentifierExpressionSemanticAction(char * name);
+DslExpression * ThisExpressionSemanticAction();
+DslExpression * NewExpressionSemanticAction(char * className, ArgumentList * arguments);
+
+ArgumentList * ArgumentListSemanticAction(DslExpression * expr);
+ArgumentList * AppendArgumentSemanticAction(ArgumentList * list, DslExpression * expr);
+
+DslExpression * UnaryExpressionSemanticAction(DslUnaryOperator operator, DslExpression * operand);
+DslExpression * BinaryExpressionSemanticAction(DslExpression * left, DslBinaryOperator operator, DslExpression * right);
+
+DslExpression * FieldAccessExpressionSemanticAction(DslExpression * object, char * field);
+DslExpression * ArrowAccessExpressionSemanticAction(DslExpression * object, char * field);
+DslExpression * IndexExpressionSemanticAction(DslExpression * array, DslExpression * index);
+DslExpression * CallExpressionSemanticAction(DslExpression * callee, ArgumentList * arguments);
+DslExpression * PostfixIncrementExpressionSemanticAction(DslExpression * operand);
+DslExpression * PostfixDecrementExpressionSemanticAction(DslExpression * operand);
+
 StatementList * AppendStatementSemanticAction(StatementList * list, DslStatement * stmt);
 DslStatement * VariableDeclarationSemanticAction(Type * type, char * name, DslExpression * initializer);
 DslStatement * IfStatementSemanticAction(DslExpression * condition, DslStatement * thenBranch, DslStatement * elseBranch);

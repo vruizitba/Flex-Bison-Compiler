@@ -112,6 +112,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %token IGNORED
 %token UNKNOWN
 %token LOWER_THAN_ELSE
+%token NEGATE PRE_INCREMENT PRE_DECREMENT POST_INCREMENT POST_DECREMENT DEREFERENCE ADDRESS_OF
 
 
 /** Non-terminals (old calculator kept until grammar rules are replaced). */
@@ -164,8 +165,8 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %left LESS GREATER LESS_EQUAL GREATER_EQUAL
 %left ADD SUBTRACT
 %left ASTERISK DIVIDE MODULO
-%right NOT
-%left DOT ARROW OPEN_BRACKET OPEN_PARENTHESIS
+%right NOT NEGATE PRE_INCREMENT PRE_DECREMENT DEREFERENCE ADDRESS_OF
+%left DOT ARROW OPEN_BRACKET OPEN_PARENTHESIS POST_INCREMENT POST_DECREMENT
 
 %%
 
@@ -282,7 +283,86 @@ expressionOptional: %empty								{ $$ = NULL; }
 	| dslExpression										{ $$ = $1; }
 	;
 
-dslExpression: %empty									{ $$ = NULL; }
+dslExpression: assignmentExpression						{ $$ = $1; }
+	;
+
+assignmentExpression: logicalOrExpression				{ $$ = $1; }
+	| unaryExpression ASSIGN assignmentExpression		{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_ASSIGN, $3); }
+	| unaryExpression PLUS_ASSIGN assignmentExpression	{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_PLUS_ASSIGN, $3); }
+	| unaryExpression MINUS_ASSIGN assignmentExpression	{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_MINUS_ASSIGN, $3); }
+	| unaryExpression ASTERISK_ASSIGN assignmentExpression	{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_MUL_ASSIGN, $3); }
+	| unaryExpression DIVIDE_ASSIGN assignmentExpression	{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_DIV_ASSIGN, $3); }
+	| unaryExpression MODULO_ASSIGN assignmentExpression	{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_MOD_ASSIGN, $3); }
+	;
+
+logicalOrExpression: logicalAndExpression				{ $$ = $1; }
+	| logicalOrExpression OR logicalAndExpression		{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_OR, $3); }
+	;
+
+logicalAndExpression: equalityExpression				{ $$ = $1; }
+	| logicalAndExpression AND equalityExpression		{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_AND, $3); }
+	;
+
+equalityExpression: relationalExpression				{ $$ = $1; }
+	| equalityExpression EQUAL relationalExpression		{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_EQUAL, $3); }
+	| equalityExpression NOT_EQUAL relationalExpression	{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_NOT_EQUAL, $3); }
+	;
+
+relationalExpression: additiveExpression				{ $$ = $1; }
+	| relationalExpression LESS additiveExpression		{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_LESS, $3); }
+	| relationalExpression GREATER additiveExpression	{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_GREATER, $3); }
+	| relationalExpression LESS_EQUAL additiveExpression	{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_LESS_EQUAL, $3); }
+	| relationalExpression GREATER_EQUAL additiveExpression	{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_GREATER_EQUAL, $3); }
+	;
+
+additiveExpression: multiplicativeExpression			{ $$ = $1; }
+	| additiveExpression ADD multiplicativeExpression	{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_ADD, $3); }
+	| additiveExpression SUBTRACT multiplicativeExpression	{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_SUB, $3); }
+	;
+
+
+multiplicativeExpression: unaryExpression				{ $$ = $1; }
+	| multiplicativeExpression ASTERISK unaryExpression	{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_MUL, $3); }
+	| multiplicativeExpression DIVIDE unaryExpression	{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_DIV, $3); }
+	| multiplicativeExpression MODULO unaryExpression	{ $$ = BinaryExpressionSemanticAction($1, BINARY_OPERATOR_MOD, $3); }
+	;
+
+unaryExpression: postfixExpression						{ $$ = $1; }
+	| NOT unaryExpression								{ $$ = UnaryExpressionSemanticAction(UNARY_OPERATOR_NOT, $2); }
+	| SUBTRACT unaryExpression %prec NEGATE				{ $$ = UnaryExpressionSemanticAction(UNARY_OPERATOR_NEGATE, $2); }
+	| INCREMENT unaryExpression %prec PRE_INCREMENT		{ $$ = UnaryExpressionSemanticAction(UNARY_OPERATOR_PRE_INCREMENT, $2); }
+	| DECREMENT unaryExpression %prec PRE_DECREMENT		{ $$ = UnaryExpressionSemanticAction(UNARY_OPERATOR_PRE_DECREMENT, $2); }
+	| ASTERISK unaryExpression %prec DEREFERENCE		{ $$ = UnaryExpressionSemanticAction(UNARY_OPERATOR_DEREFERENCE, $2); }
+	| AMPERSAND unaryExpression %prec ADDRESS_OF		{ $$ = UnaryExpressionSemanticAction(UNARY_OPERATOR_ADDRESS_OF, $2); }
+	;
+
+postfixExpression: primaryExpression					{ $$ = $1; }
+	| postfixExpression DOT IDENTIFIER					{ $$ = FieldAccessExpressionSemanticAction($1, $3); }
+	| postfixExpression ARROW IDENTIFIER				{ $$ = ArrowAccessExpressionSemanticAction($1, $3); }
+	| postfixExpression OPEN_BRACKET dslExpression CLOSE_BRACKET
+		{ $$ = IndexExpressionSemanticAction($1, $3); }
+	| postfixExpression OPEN_PARENTHESIS argumentList CLOSE_PARENTHESIS
+		{ $$ = CallExpressionSemanticAction($1, $3); }
+	| postfixExpression INCREMENT %prec POST_INCREMENT	{ $$ = PostfixIncrementExpressionSemanticAction($1); }
+	| postfixExpression DECREMENT %prec POST_DECREMENT	{ $$ = PostfixDecrementExpressionSemanticAction($1); }
+	;
+
+primaryExpression: INTEGER								{ $$ = IntegerExpressionSemanticAction($1); }
+	| REAL												{ $$ = FloatExpressionSemanticAction($1); }
+	| STRING											{ $$ = StringExpressionSemanticAction($1); }
+	| CHAR												{ $$ = CharExpressionSemanticAction($1); }
+	| BOOLEAN_TRUE										{ $$ = BooleanExpressionSemanticAction(1); }
+	| BOOLEAN_FALSE										{ $$ = BooleanExpressionSemanticAction(0); }
+	| IDENTIFIER										{ $$ = IdentifierExpressionSemanticAction($1); }
+	| THIS												{ $$ = ThisExpressionSemanticAction(); }
+	| NEW IDENTIFIER OPEN_PARENTHESIS argumentList CLOSE_PARENTHESIS
+		{ $$ = NewExpressionSemanticAction($2, $4); }
+	| OPEN_PARENTHESIS dslExpression CLOSE_PARENTHESIS	{ $$ = $2; }
+	;
+
+argumentList: %empty									{ $$ = NULL; }
+	| dslExpression										{ $$ = ArgumentListSemanticAction($1); }
+	| argumentList COMMA dslExpression					{ $$ = AppendArgumentSemanticAction($1, $3); }
 	;
 
 parameterList: %empty									{ $$ = NULL; }

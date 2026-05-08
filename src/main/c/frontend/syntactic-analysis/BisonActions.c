@@ -386,6 +386,162 @@ DslProgram * AddFunctionSemanticAction(DslProgram * program, Function * function
 	return program;
 }
 
+DslExpression * IntegerExpressionSemanticAction(int value) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	expr->kind = EXPRESSION_INTEGER;
+	expr->integerValue = value;
+	return expr;
+}
+
+DslExpression * FloatExpressionSemanticAction(double value) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	expr->kind = EXPRESSION_FLOAT;
+	expr->floatValue = value;
+	return expr;
+}
+
+DslExpression * StringExpressionSemanticAction(char * value) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	expr->kind = EXPRESSION_STRING;
+	expr->stringValue = value;
+	return expr;
+}
+
+DslExpression * CharExpressionSemanticAction(char value) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	expr->kind = EXPRESSION_CHAR;
+	expr->charValue = value;
+	return expr;
+}
+
+DslExpression * BooleanExpressionSemanticAction(int value) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	expr->kind = EXPRESSION_BOOLEAN;
+	expr->booleanValue = value;
+	return expr;
+}
+
+DslExpression * IdentifierExpressionSemanticAction(char * name) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	expr->kind = EXPRESSION_IDENTIFIER;
+	expr->identifier = name;
+	return expr;
+}
+
+DslExpression * ThisExpressionSemanticAction() {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	expr->kind = EXPRESSION_THIS;
+	return expr;
+}
+
+DslExpression * NewExpressionSemanticAction(char * className, ArgumentList * arguments) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	expr->kind = EXPRESSION_NEW;
+	expr->newExpression.className = className;
+	expr->newExpression.arguments = arguments;
+	return expr;
+}
+
+ArgumentList * ArgumentListSemanticAction(DslExpression * expression) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	ArgumentList * node = calloc(1, sizeof(ArgumentList));
+	node->expression = expression;
+	return node;
+}
+
+ArgumentList * AppendArgumentSemanticAction(ArgumentList * list, DslExpression * expression) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	ArgumentList * node = calloc(1, sizeof(ArgumentList));
+	node->expression = expression;
+	ArgumentList * current = list;
+	while (current->next != NULL) {
+		current = current->next;
+	}
+	current->next = node;
+	return list;
+}
+
+DslExpression * BinaryExpressionSemanticAction(DslExpression * left, DslBinaryOperator operator, DslExpression * right) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	expr->kind = EXPRESSION_BINARY;
+	expr->binary.operator = operator;
+	expr->binary.left = left;
+	expr->binary.right = right;
+	return expr;
+}
+
+DslExpression * UnaryExpressionSemanticAction(DslUnaryOperator operator, DslExpression * operand) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	expr->kind = EXPRESSION_UNARY;
+	expr->unary.operator = operator;
+	expr->unary.operand = operand;
+	return expr;
+}
+
+DslExpression * FieldAccessExpressionSemanticAction(DslExpression * object, char * field) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	expr->kind = EXPRESSION_FIELD_ACCESS;
+	expr->fieldAccess.object = object;
+	expr->fieldAccess.field = field;
+	return expr;
+}
+
+DslExpression * ArrowAccessExpressionSemanticAction(DslExpression * object, char * field) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	expr->kind = EXPRESSION_ARROW_ACCESS;
+	expr->fieldAccess.object = object;
+	expr->fieldAccess.field = field;
+	return expr;
+}
+
+DslExpression * IndexExpressionSemanticAction(DslExpression * array, DslExpression * index) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	expr->kind = EXPRESSION_INDEX;
+	expr->indexAccess.array = array;
+	expr->indexAccess.index = index;
+	return expr;
+}
+
+DslExpression * CallExpressionSemanticAction(DslExpression * callee, ArgumentList * arguments) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	expr->kind = EXPRESSION_CALL;
+	expr->call.callee = callee;
+	expr->call.arguments = arguments;
+	return expr;
+}
+
+DslExpression * PostfixIncrementExpressionSemanticAction(DslExpression * operand) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	expr->kind = EXPRESSION_UNARY;
+	expr->unary.operator = UNARY_OPERATOR_POST_INCREMENT;
+	expr->unary.operand = operand;
+	return expr;
+}
+
+DslExpression * PostfixDecrementExpressionSemanticAction(DslExpression * operand) {
+	_logSyntacticAnalyzerAction(__FUNCTION__);
+	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	expr->kind = EXPRESSION_UNARY;
+	expr->unary.operator = UNARY_OPERATOR_POST_DECREMENT;
+	expr->unary.operand = operand;
+	return expr;
+}
+
 DslStatement * VariableDeclarationSemanticAction(Type * type, char * name, DslExpression * initializer) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
 	DslStatement * stmt = calloc(1, sizeof(DslStatement));
