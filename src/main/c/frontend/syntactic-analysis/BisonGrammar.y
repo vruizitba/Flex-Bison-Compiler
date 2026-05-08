@@ -54,8 +54,6 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 	Class * classNode;
 	MemberList * memberList;
 	MemberSuffix * memberSuffix;
-	Field * field;
-	Method * method;
 	Parameter * parameter;
 	Statement * statement;
 	StatementList * statementList;
@@ -78,8 +76,6 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %destructor { destroyStatementList($$); } <statementList>
 %destructor { destroyArgumentList($$); } <argumentList>
 %destructor { destroyType($$); } <type>
-%destructor { destroyField($$); } <field>
-%destructor { destroyMethod($$); } <method>
 %destructor { destroyClass($$); } <classNode>
 %destructor { destroyMemberList($$); } <memberList>
 %destructor { destroyMemberSuffix($$); } <memberSuffix>
