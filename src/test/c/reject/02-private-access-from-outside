@@ -1,0 +1,12 @@
+/*
+ * Stage II false positive: parses fine syntactically.
+ * Stage III must reject: "name" is private, cannot be accessed from outside the class.
+ */
+class Animal {
+    private string name;
+}
+
+main {
+    Animal a = new Animal();
+    string name = a.name;
+}

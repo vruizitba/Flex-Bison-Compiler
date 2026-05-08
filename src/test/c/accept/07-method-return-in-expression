@@ -1,0 +1,14 @@
+class Calculator {
+    public int add(int a, int b) {
+        return a + b;
+    }
+    public bool isPositive(int n) {
+        return n > 0;
+    }
+}
+
+main {
+    Calculator c = new Calculator();
+    int sum = c.add(3, 4);
+    bool positive = c.isPositive(sum);
+}

@@ -1,0 +1,15 @@
+class Animal {
+    private string name;
+    public string getName() {
+        return this.name;
+    }
+    public void setName(string n) {
+        this.name = n;
+    }
+}
+
+main {
+    Animal a = new Animal();
+    a.setName("Tiger");
+    string name = a.getName();
+}

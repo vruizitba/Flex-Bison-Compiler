@@ -1,0 +1,27 @@
+/*
+ * Stage II accepts: method calls on Dog parse as plain member-access expressions.
+ * Stage III must verify: "setName" and "getName" are actually inherited from Animal,
+ * and that the call in "describe" resolves to the inherited method.
+ */
+class Animal {
+    public string name;
+    public string getName() {
+        return this.name;
+    }
+    public void setName(string n) {
+        this.name = n;
+    }
+}
+
+class Dog extends Animal {
+    public string breed;
+    public string describe() {
+        return this.getName();
+    }
+}
+
+main {
+    Dog d = new Dog();
+    d.setName("Rex");
+    string name = d.describe();
+}

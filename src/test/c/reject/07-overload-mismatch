@@ -1,0 +1,17 @@
+/*
+ * Stage II false positive: parses fine syntactically.
+ * Stage III must reject: no overload of "add" matches the call with (string, string).
+ */
+class Calculator {
+    public int add(int a, int b) {
+        return a + b;
+    }
+    public int add(int a, int b, int c) {
+        return a + b + c;
+    }
+}
+
+main {
+    Calculator c = new Calculator();
+    int r = c.add("hello", "world");
+}

@@ -1,0 +1,7 @@
+/*
+ * Stage II false positive: parses fine syntactically.
+ * Stage III must reject: "this" used outside the context of a class instance.
+ */
+main {
+    int x = this.value;
+}

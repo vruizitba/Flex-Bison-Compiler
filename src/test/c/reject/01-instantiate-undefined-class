@@ -1,0 +1,7 @@
+/*
+ * Stage II false positive: parses fine syntactically.
+ * Stage III must reject: class "Foo" is not declared.
+ */
+main {
+    Foo f = new Foo();
+}

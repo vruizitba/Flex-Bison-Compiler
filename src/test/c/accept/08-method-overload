@@ -1,0 +1,19 @@
+/*
+ * Stage II accepts: both overloads parse as valid method declarations.
+ * Stage III must verify: overloaded methods have distinct signatures (no two
+ * methods with the same name and identical parameter types).
+ */
+class Calculator {
+    public int add(int a, int b) {
+        return a + b;
+    }
+    public int add(int a, int b, int c) {
+        return a + b + c;
+    }
+}
+
+main {
+    Calculator calc = new Calculator();
+    int r1 = calc.add(1, 2);
+    int r2 = calc.add(1, 2, 3);
+}

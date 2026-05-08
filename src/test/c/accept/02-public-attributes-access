@@ -1,0 +1,11 @@
+class Animal {
+    public string name;
+    public int age;
+}
+
+main {
+    Animal a;
+    a = new Animal();
+    int age = a.age;
+    string name = a.name;
+}

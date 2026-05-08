@@ -1,0 +1,7 @@
+/*
+ * Stage II false positive: parses fine syntactically.
+ * Stage III must reject: class "Animal" is not declared.
+ */
+class Cat extends Animal {
+    public string name;
+}

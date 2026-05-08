@@ -1,0 +1,20 @@
+/*
+ * Stage II accepts: "this.grow()" and "this.age" parse as plain member access.
+ * Stage III must verify: protected members are accessible from the child class
+ * but not from outside it.
+ */
+class Animal {
+    protected int age;
+    protected void grow() {
+        this.age = this.age + 1;
+    }
+}
+
+class Dog extends Animal {
+    public void birthday() {
+        this.grow();
+    }
+    public int getAge() {
+        return this.age;
+    }
+}

@@ -1,0 +1,12 @@
+class Point {
+    public int x;
+    public int y;
+}
+
+main {
+    int n = 5;
+    bool flag = true;
+    string msg = "hello";
+    Point p;
+    p = new Point();
+}

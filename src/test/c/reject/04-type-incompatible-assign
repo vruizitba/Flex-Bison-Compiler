@@ -1,0 +1,7 @@
+/*
+ * Stage II false positive: parses fine syntactically.
+ * Stage III must reject: cannot assign a string literal to an int variable.
+ */
+main {
+    int x = "hello";
+}

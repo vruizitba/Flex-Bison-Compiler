@@ -1,0 +1,12 @@
+/*
+ * Stage II false positive: parses fine syntactically.
+ * Stage III must reject: method "fly" does not exist in class "Dog".
+ */
+class Dog {
+    public string name;
+}
+
+main {
+    Dog d = new Dog();
+    d.fly();
+}
