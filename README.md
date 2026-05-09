@@ -1,10 +1,10 @@
-[![✗](https://img.shields.io/badge/Release-v2.0.0-ffb600.svg?style=for-the-badge)](https://github.com/vruizitba/Flex-Bison-Compiler/releases)
+[![✗](https://img.shields.io/badge/Release-v2.0.0-ffb600.svg?style=for-the-badge)](https://github.com/vruizitba/TPE_ATLC_Language_C--/releases)
 
-[![✗](https://github.com/vruizitba/Flex-Bison-Compiler/actions/workflows/pipeline.yaml/badge.svg?branch=production)](https://github.com/vruizitba/Flex-Bison-Compiler/actions/workflows/pipeline.yaml)
+[![✗](https://github.com/vruizitba/TPE_ATLC_Language_C--/actions/workflows/pipeline.yaml/badge.svg?branch=development)](https://github.com/vruizitba/TPE_ATLC_Language_C--/actions/workflows/pipeline.yaml)
 
-# Flex-Bison-Compiler
+# C--_Compiler
 
-A base compiler example, developed with Flex and Bison.
+A compiler for C--, an object-oriented extension of C with classes, single inheritance, and static typing. Built with Flex and Bison.
 
 * [Requirements](#requirements)
 * [Configuration](#configuration)
