@@ -29,7 +29,7 @@ void destroyType(Type * type) {
 	free(type);
 }
 
-void destroyDslExpression(DslExpression * expression) {
+void destroyExpression(Expression * expression) {
 	if (expression == NULL) {
 		return;
 	}
@@ -41,23 +41,23 @@ void destroyDslExpression(DslExpression * expression) {
 			free(expression->identifier);
 			break;
 		case EXPRESSION_BINARY:
-			destroyDslExpression(expression->binary.left);
-			destroyDslExpression(expression->binary.right);
+			destroyExpression(expression->binary.left);
+			destroyExpression(expression->binary.right);
 			break;
 		case EXPRESSION_UNARY:
-			destroyDslExpression(expression->unary.operand);
+			destroyExpression(expression->unary.operand);
 			break;
 		case EXPRESSION_FIELD_ACCESS:
 		case EXPRESSION_ARROW_ACCESS:
-			destroyDslExpression(expression->fieldAccess.object);
+			destroyExpression(expression->fieldAccess.object);
 			free(expression->fieldAccess.field);
 			break;
 		case EXPRESSION_INDEX:
-			destroyDslExpression(expression->indexAccess.array);
-			destroyDslExpression(expression->indexAccess.index);
+			destroyExpression(expression->indexAccess.array);
+			destroyExpression(expression->indexAccess.index);
 			break;
 		case EXPRESSION_CALL:
-			destroyDslExpression(expression->call.callee);
+			destroyExpression(expression->call.callee);
 			destroyArgumentList(expression->call.arguments);
 			break;
 		case EXPRESSION_NEW:
@@ -78,28 +78,28 @@ void destroyStatement(Statement * statement) {
 		case STATEMENT_VARIABLE_DECLARATION:
 			destroyType(statement->variableDeclaration.type);
 			free(statement->variableDeclaration.name);
-			destroyDslExpression(statement->variableDeclaration.initializer);
+			destroyExpression(statement->variableDeclaration.initializer);
 			break;
 		case STATEMENT_EXPRESSION:
-			destroyDslExpression(statement->expressionStatement);
+			destroyExpression(statement->expressionStatement);
 			break;
 		case STATEMENT_IF:
-			destroyDslExpression(statement->ifStatement.condition);
+			destroyExpression(statement->ifStatement.condition);
 			destroyStatement(statement->ifStatement.thenBranch);
 			destroyStatement(statement->ifStatement.elseBranch);
 			break;
 		case STATEMENT_WHILE:
-			destroyDslExpression(statement->whileStatement.condition);
+			destroyExpression(statement->whileStatement.condition);
 			destroyStatement(statement->whileStatement.body);
 			break;
 		case STATEMENT_FOR:
 			destroyStatement(statement->forStatement.initializer);
-			destroyDslExpression(statement->forStatement.condition);
-			destroyDslExpression(statement->forStatement.step);
+			destroyExpression(statement->forStatement.condition);
+			destroyExpression(statement->forStatement.step);
 			destroyStatement(statement->forStatement.body);
 			break;
 		case STATEMENT_RETURN:
-			destroyDslExpression(statement->returnStatement.value);
+			destroyExpression(statement->returnStatement.value);
 			break;
 		case STATEMENT_BLOCK:
 			destroyStatementList(statement->block);
@@ -121,7 +121,7 @@ void destroyArgumentList(ArgumentList * list) {
 	if (list == NULL) {
 		return;
 	}
-	destroyDslExpression(list->expression);
+	destroyExpression(list->expression);
 	destroyArgumentList(list->next);
 	free(list);
 }
@@ -162,7 +162,7 @@ void destroyField(Field * field) {
 	}
 	destroyType(field->type);
 	free(field->name);
-	destroyDslExpression(field->initializer);
+	destroyExpression(field->initializer);
 	destroyField(field->next);
 	free(field);
 }
@@ -203,7 +203,7 @@ void destroyFunction(Function * function) {
 	free(function);
 }
 
-void destroyDslProgram(DslProgram * program) {
+void destroyProgram(Program * program) {
 	if (program == NULL) {
 		return;
 	}

@@ -15,7 +15,8 @@ ModuleDestructor initializeAbstractSyntaxTreeModule();
  */
 
 
-/* Legacy calculator types — kept for the backend Generator. */
+/* Legacy calculator types. */
+#if 0
 
 typedef enum ExpressionType ExpressionType;
 typedef enum FactorType FactorType;
@@ -65,6 +66,8 @@ struct Program {
 	Expression * expression;
 };
 
+#endif
+
 /**
  * 
  * DSL AST node types.
@@ -89,7 +92,7 @@ typedef enum {
     BINARY_OPERATOR_AND, BINARY_OPERATOR_OR,
     BINARY_OPERATOR_ASSIGN, BINARY_OPERATOR_PLUS_ASSIGN, BINARY_OPERATOR_MINUS_ASSIGN,
     BINARY_OPERATOR_MUL_ASSIGN, BINARY_OPERATOR_DIV_ASSIGN, BINARY_OPERATOR_MOD_ASSIGN
-} DslBinaryOperator;
+} BinaryOperator;
 
 typedef enum {
     UNARY_OPERATOR_NOT, UNARY_OPERATOR_NEGATE,
@@ -113,7 +116,7 @@ typedef enum {
 } StatementKind;
 
 typedef struct Type Type;
-typedef struct DslExpression DslExpression;
+typedef struct Expression Expression;
 typedef struct Statement Statement;
 typedef struct Parameter Parameter;
 typedef struct StatementList StatementList;
@@ -122,7 +125,7 @@ typedef struct Method Method;
 typedef struct Field Field;
 typedef struct Class Class;
 typedef struct Function Function;
-typedef struct DslProgram DslProgram;
+typedef struct Program Program;
 typedef struct MemberList MemberList;
 typedef struct MemberSuffix MemberSuffix;
 
@@ -139,7 +142,7 @@ struct Type {
 
 void destroyType(Type * type);
 
-struct DslExpression {
+struct Expression {
     ExpressionKind kind;
     union {
         int integerValue;
@@ -149,24 +152,24 @@ struct DslExpression {
         int booleanValue;
         char * identifier;
         struct {
-            DslBinaryOperator operator;
-            DslExpression * left;
-            DslExpression * right;
+            BinaryOperator operator;
+            Expression * left;
+            Expression * right;
         } binary;
         struct {
             UnaryOperator operator;
-            DslExpression * operand;
+            Expression * operand;
         } unary;
         struct {
-            DslExpression * object;
+            Expression * object;
             char * field;
         } fieldAccess;
         struct {
-            DslExpression * array;
-            DslExpression * index;
+            Expression * array;
+            Expression * index;
         } indexAccess;
         struct {
-            DslExpression * callee;
+            Expression * callee;
             ArgumentList * arguments;
         } call;
         struct {
@@ -176,7 +179,7 @@ struct DslExpression {
     };
 };
 
-void destroyDslExpression(DslExpression * expression);
+void destroyExpression(Expression * expression);
 
 struct Statement {
     StatementKind kind;
@@ -184,26 +187,26 @@ struct Statement {
         struct {
             Type * type;
             char * name;
-            DslExpression * initializer;    // NULL if no initializer
+            Expression * initializer;    // NULL if no initializer
         } variableDeclaration;
-        DslExpression * expressionStatement;
+        Expression * expressionStatement;
         struct {
-            DslExpression * condition;
+            Expression * condition;
             Statement * thenBranch;
             Statement * elseBranch;      // NULL if no else
         } ifStatement;
         struct {
-            DslExpression * condition;
+            Expression * condition;
             Statement * body;
         } whileStatement;
         struct {
             Statement * initializer;     // NULL if empty
-            DslExpression * condition;
-            DslExpression * step;
+            Expression * condition;
+            Expression * step;
             Statement * body;
         } forStatement;
         struct {
-            DslExpression * value;          // NULL for bare return;
+            Expression * value;          // NULL for bare return;
         } returnStatement;
         StatementList * block;
     };
@@ -217,7 +220,7 @@ struct StatementList {
 };
 
 struct ArgumentList {
-    DslExpression * expression;
+    Expression * expression;
     ArgumentList * next;
 };
 
@@ -236,7 +239,7 @@ struct Field {
     char isStatic;
     Type * type;
     char * name;
-    DslExpression * initializer;    // NULL if no initializer
+    Expression * initializer;    // NULL if no initializer
     Field * next;
 };
 
@@ -267,7 +270,7 @@ struct Function {
     Function * next;
 };
 
-struct DslProgram {
+struct Program {
     Class * classes;
     Function * functions;
     StatementList * mainBody;
@@ -293,6 +296,6 @@ void destroyField(Field * field);
 void destroyMethod(Method * method);
 void destroyClass(Class * class);
 void destroyFunction(Function * function);
-void destroyDslProgram(DslProgram * program);
+void destroyProgram(Program * program);
 
 #endif

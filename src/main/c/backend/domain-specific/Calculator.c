@@ -18,7 +18,8 @@ ModuleDestructor initializeCalculatorModule() {
 	return _shutdownCalculatorModule;
 }
 
-/** PRIVATE FUNCTIONS */
+/* Legacy. */
+#if 0
 
 static BinaryOperator _expressionTypeToBinaryOperator(const ExpressionType type);
 static ComputationResult _invalidBinaryOperator(const int x, const int y);
@@ -59,6 +60,8 @@ static ComputationResult _invalidComputation() {
 	return computationResult;
 }
 
+#endif
+
 /** PUBLIC FUNCTIONS */
 
 ComputationResult add(const int leftAddend, const int rightAddend) {
@@ -97,6 +100,9 @@ ComputationResult subtract(const int minuend, const int subtract) {
 	};
 	return computationResult;
 }
+
+/* Legacy. */
+#if 0
 
 ComputationResult computeConstant(Constant * constant) {
 	ComputationResult computationResult = {
@@ -139,7 +145,12 @@ ComputationResult computeFactor(Factor * factor) {
 	}
 }
 
+#endif
+
 ComputationResult executeCalculator(CompilerState * compilerState) {
+	/* Legacy.
 	Program * program = compilerState->abstractSyntaxtTree;
 	return computeExpression(program->expression);
+	*/
+	return (ComputationResult){ 0 }; 
 }

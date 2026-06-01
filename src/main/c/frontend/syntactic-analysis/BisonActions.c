@@ -36,20 +36,20 @@ static void _logSyntacticAnalyzerAction(const char * functionName) {
 
 /* PUBLIC FUNCTIONS */
 
-DslProgram * ProgramSemanticAction(DslProgram * program) {
+Program * ProgramSemanticAction(Program * program) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
 	_compilerState->abstractSyntaxtTree = program;
 	return program;
 }
 
-DslProgram * EmptyDeclarationListSemanticAction() {
+Program * EmptyDeclarationListSemanticAction() {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	DslProgram * program = calloc(1, sizeof(DslProgram));
+	Program * program = calloc(1, sizeof(Program));
 	_compilerState->abstractSyntaxtTree = program;
 	return program;
 }
 
-DslProgram * MainDeclarationSemanticAction(DslProgram * program, StatementList * mainBody) {
+Program * MainDeclarationSemanticAction(Program * program, StatementList * mainBody) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
 	program->mainBody = mainBody;
 	return program;
@@ -165,7 +165,7 @@ static Field * _buildField(Visibility visibility, char isStatic, Type * type, ch
 	return field;
 }
 
-DslProgram * AddClassSemanticAction(DslProgram * program, Class * classNode) {
+Program * AddClassSemanticAction(Program * program, Class * classNode) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
 	classNode->next = program->classes;
 	program->classes = classNode;
@@ -331,85 +331,85 @@ Function * FunctionSemanticAction(Type * returnType, char * name, Parameter * pa
 	return func;
 }
 
-DslProgram * AddFunctionSemanticAction(DslProgram * program, Function * function) {
+Program * AddFunctionSemanticAction(Program * program, Function * function) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
 	function->next = program->functions;
 	program->functions = function;
 	return program;
 }
 
-DslExpression * IntegerExpressionSemanticAction(int value) {
+Expression * IntegerExpressionSemanticAction(int value) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	Expression * expr = calloc(1, sizeof(Expression));
 	expr->kind = EXPRESSION_INTEGER;
 	expr->integerValue = value;
 	return expr;
 }
 
-DslExpression * FloatExpressionSemanticAction(double value) {
+Expression * FloatExpressionSemanticAction(double value) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	Expression * expr = calloc(1, sizeof(Expression));
 	expr->kind = EXPRESSION_FLOAT;
 	expr->floatValue = value;
 	return expr;
 }
 
-DslExpression * StringExpressionSemanticAction(char * value) {
+Expression * StringExpressionSemanticAction(char * value) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	Expression * expr = calloc(1, sizeof(Expression));
 	expr->kind = EXPRESSION_STRING;
 	expr->stringValue = value;
 	return expr;
 }
 
-DslExpression * CharExpressionSemanticAction(char value) {
+Expression * CharExpressionSemanticAction(char value) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	Expression * expr = calloc(1, sizeof(Expression));
 	expr->kind = EXPRESSION_CHAR;
 	expr->charValue = value;
 	return expr;
 }
 
-DslExpression * BooleanExpressionSemanticAction(int value) {
+Expression * BooleanExpressionSemanticAction(int value) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	Expression * expr = calloc(1, sizeof(Expression));
 	expr->kind = EXPRESSION_BOOLEAN;
 	expr->booleanValue = value;
 	return expr;
 }
 
-DslExpression * IdentifierExpressionSemanticAction(char * name) {
+Expression * IdentifierExpressionSemanticAction(char * name) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	Expression * expr = calloc(1, sizeof(Expression));
 	expr->kind = EXPRESSION_IDENTIFIER;
 	expr->identifier = name;
 	return expr;
 }
 
-DslExpression * ThisExpressionSemanticAction() {
+Expression * ThisExpressionSemanticAction() {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	Expression * expr = calloc(1, sizeof(Expression));
 	expr->kind = EXPRESSION_THIS;
 	return expr;
 }
 
-DslExpression * NewExpressionSemanticAction(char * className, ArgumentList * arguments) {
+Expression * NewExpressionSemanticAction(char * className, ArgumentList * arguments) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	Expression * expr = calloc(1, sizeof(Expression));
 	expr->kind = EXPRESSION_NEW;
 	expr->newExpression.className = className;
 	expr->newExpression.arguments = arguments;
 	return expr;
 }
 
-ArgumentList * ArgumentListSemanticAction(DslExpression * expression) {
+ArgumentList * ArgumentListSemanticAction(Expression * expression) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
 	ArgumentList * node = calloc(1, sizeof(ArgumentList));
 	node->expression = expression;
 	return node;
 }
 
-ArgumentList * AppendArgumentSemanticAction(ArgumentList * list, DslExpression * expression) {
+ArgumentList * AppendArgumentSemanticAction(ArgumentList * list, Expression * expression) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
 	ArgumentList * node = calloc(1, sizeof(ArgumentList));
 	node->expression = expression;
@@ -421,9 +421,9 @@ ArgumentList * AppendArgumentSemanticAction(ArgumentList * list, DslExpression *
 	return list;
 }
 
-DslExpression * BinaryExpressionSemanticAction(DslExpression * left, DslBinaryOperator operator, DslExpression * right) {
+Expression * BinaryExpressionSemanticAction(Expression * left, BinaryOperator operator, Expression * right) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	Expression * expr = calloc(1, sizeof(Expression));
 	expr->kind = EXPRESSION_BINARY;
 	expr->binary.operator = operator;
 	expr->binary.left = left;
@@ -431,70 +431,70 @@ DslExpression * BinaryExpressionSemanticAction(DslExpression * left, DslBinaryOp
 	return expr;
 }
 
-DslExpression * UnaryExpressionSemanticAction(UnaryOperator operator, DslExpression * operand) {
+Expression * UnaryExpressionSemanticAction(UnaryOperator operator, Expression * operand) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	Expression * expr = calloc(1, sizeof(Expression));
 	expr->kind = EXPRESSION_UNARY;
 	expr->unary.operator = operator;
 	expr->unary.operand = operand;
 	return expr;
 }
 
-DslExpression * FieldAccessExpressionSemanticAction(DslExpression * object, char * field) {
+Expression * FieldAccessExpressionSemanticAction(Expression * object, char * field) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	Expression * expr = calloc(1, sizeof(Expression));
 	expr->kind = EXPRESSION_FIELD_ACCESS;
 	expr->fieldAccess.object = object;
 	expr->fieldAccess.field = field;
 	return expr;
 }
 
-DslExpression * ArrowAccessExpressionSemanticAction(DslExpression * object, char * field) {
+Expression * ArrowAccessExpressionSemanticAction(Expression * object, char * field) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	Expression * expr = calloc(1, sizeof(Expression));
 	expr->kind = EXPRESSION_ARROW_ACCESS;
 	expr->fieldAccess.object = object;
 	expr->fieldAccess.field = field;
 	return expr;
 }
 
-DslExpression * IndexExpressionSemanticAction(DslExpression * array, DslExpression * index) {
+Expression * IndexExpressionSemanticAction(Expression * array, Expression * index) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	Expression * expr = calloc(1, sizeof(Expression));
 	expr->kind = EXPRESSION_INDEX;
 	expr->indexAccess.array = array;
 	expr->indexAccess.index = index;
 	return expr;
 }
 
-DslExpression * CallExpressionSemanticAction(DslExpression * callee, ArgumentList * arguments) {
+Expression * CallExpressionSemanticAction(Expression * callee, ArgumentList * arguments) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	Expression * expr = calloc(1, sizeof(Expression));
 	expr->kind = EXPRESSION_CALL;
 	expr->call.callee = callee;
 	expr->call.arguments = arguments;
 	return expr;
 }
 
-DslExpression * PostfixIncrementExpressionSemanticAction(DslExpression * operand) {
+Expression * PostfixIncrementExpressionSemanticAction(Expression * operand) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	Expression * expr = calloc(1, sizeof(Expression));
 	expr->kind = EXPRESSION_UNARY;
 	expr->unary.operator = UNARY_OPERATOR_POST_INCREMENT;
 	expr->unary.operand = operand;
 	return expr;
 }
 
-DslExpression * PostfixDecrementExpressionSemanticAction(DslExpression * operand) {
+Expression * PostfixDecrementExpressionSemanticAction(Expression * operand) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
-	DslExpression * expr = calloc(1, sizeof(DslExpression));
+	Expression * expr = calloc(1, sizeof(Expression));
 	expr->kind = EXPRESSION_UNARY;
 	expr->unary.operator = UNARY_OPERATOR_POST_DECREMENT;
 	expr->unary.operand = operand;
 	return expr;
 }
 
-Statement * VariableDeclarationSemanticAction(Type * type, char * name, DslExpression * initializer) {
+Statement * VariableDeclarationSemanticAction(Type * type, char * name, Expression * initializer) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
 	Statement * stmt = calloc(1, sizeof(Statement));
 	stmt->kind = STATEMENT_VARIABLE_DECLARATION;
@@ -504,7 +504,7 @@ Statement * VariableDeclarationSemanticAction(Type * type, char * name, DslExpre
 	return stmt;
 }
 
-Statement * IfStatementSemanticAction(DslExpression * condition, Statement * thenBranch, Statement * elseBranch) {
+Statement * IfStatementSemanticAction(Expression * condition, Statement * thenBranch, Statement * elseBranch) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
 	Statement * stmt = calloc(1, sizeof(Statement));
 	stmt->kind = STATEMENT_IF;
@@ -514,7 +514,7 @@ Statement * IfStatementSemanticAction(DslExpression * condition, Statement * the
 	return stmt;
 }
 
-Statement * WhileStatementSemanticAction(DslExpression * condition, Statement * body) {
+Statement * WhileStatementSemanticAction(Expression * condition, Statement * body) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
 	Statement * stmt = calloc(1, sizeof(Statement));
 	stmt->kind = STATEMENT_WHILE;
@@ -523,7 +523,7 @@ Statement * WhileStatementSemanticAction(DslExpression * condition, Statement * 
 	return stmt;
 }
 
-Statement * ForStatementSemanticAction(Statement * initializer, DslExpression * condition, DslExpression * step, Statement * body) {
+Statement * ForStatementSemanticAction(Statement * initializer, Expression * condition, Expression * step, Statement * body) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
 	Statement * stmt = calloc(1, sizeof(Statement));
 	stmt->kind = STATEMENT_FOR;
@@ -534,7 +534,7 @@ Statement * ForStatementSemanticAction(Statement * initializer, DslExpression * 
 	return stmt;
 }
 
-Statement * ReturnStatementSemanticAction(DslExpression * value) {
+Statement * ReturnStatementSemanticAction(Expression * value) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
 	Statement * stmt = calloc(1, sizeof(Statement));
 	stmt->kind = STATEMENT_RETURN;
@@ -557,7 +557,7 @@ StatementList * AppendStatementSemanticAction(StatementList * list, Statement * 
 	return list;
 }
 
-Statement * ExpressionStatementSemanticAction(DslExpression * expr) {
+Statement * ExpressionStatementSemanticAction(Expression * expr) {
 	_logSyntacticAnalyzerAction(__FUNCTION__);
 	Statement * stmt = calloc(1, sizeof(Statement));
 	stmt->kind = STATEMENT_EXPRESSION;

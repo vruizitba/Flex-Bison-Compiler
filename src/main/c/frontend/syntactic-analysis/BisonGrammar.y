@@ -50,14 +50,14 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 
 	/** Non-terminals. */
 
-	DslProgram * dslProgram;
+	Program * program;
 	Class * classNode;
 	MemberList * memberList;
 	MemberSuffix * memberSuffix;
 	Parameter * parameter;
 	Statement * statement;
 	StatementList * statementList;
-	DslExpression * dslExpression;
+	Expression * expression;
 	ArgumentList * argumentList;
 	Type * type;
 	Function * function;
@@ -71,7 +71,7 @@ void yyerror(const YYLTYPE * location, const char * message) {}
  *
  * @see https://www.gnu.org/software/bison/manual/html_node/Destructor-Decl.html
  */
-%destructor { destroyDslExpression($$); } <dslExpression>
+%destructor { destroyExpression($$); } <expression>
 %destructor { destroyStatement($$); } <statement>
 %destructor { destroyStatementList($$); } <statementList>
 %destructor { destroyArgumentList($$); } <argumentList>
@@ -118,10 +118,10 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 
 
 /** Root non-terminal. */
-%type <dslProgram> program
+%type <program> program
 
 /** Non-terminals. */
-%type <dslProgram> declarationList
+%type <program> declarationList
 %type <classNode> classDeclaration
 %type <function> functionDeclaration
 %type <statementList> mainDeclaration
@@ -132,18 +132,18 @@ void yyerror(const YYLTYPE * location, const char * message) {}
 %type <memberList> memberList member memberAfterVisibility
 %type <memberSuffix> memberAfterIdentifier memberTail
 %type <integer> visibility
-%type <dslExpression> initializerOptional
+%type <expression> initializerOptional
 %type <parameter> parameterList nonEmptyParamList parameter
 %type <type> primitiveType classTypeTail
 
 %type <statementList> block statementList
 %type <statement> statement variableDeclaration variableDeclarationBase expressionStatement
 %type <statement> returnStatement ifStatement whileStatement forStatement forInitializer
-%type <dslExpression> expressionOptional dslExpression
+%type <expression> expressionOptional expression
 
-%type <dslExpression> assignmentExpression logicalOrExpression logicalAndExpression
-%type <dslExpression> equalityExpression relationalExpression additiveExpression
-%type <dslExpression> multiplicativeExpression unaryExpression postfixExpression primaryExpression
+%type <expression> assignmentExpression logicalOrExpression logicalAndExpression
+%type <expression> equalityExpression relationalExpression additiveExpression
+%type <expression> multiplicativeExpression unaryExpression postfixExpression primaryExpression
 %type <argumentList> argumentList
 
 /**
@@ -248,39 +248,39 @@ variableDeclarationBase: type IDENTIFIER initializerOptional	{ $$ = VariableDecl
 variableDeclaration: variableDeclarationBase SEMICOLON	{ $$ = $1; }
 	;
 
-ifStatement: IF OPEN_PARENTHESIS dslExpression CLOSE_PARENTHESIS statement %prec LOWER_THAN_ELSE
+ifStatement: IF OPEN_PARENTHESIS expression CLOSE_PARENTHESIS statement %prec LOWER_THAN_ELSE
 		{ $$ = IfStatementSemanticAction($3, $5, NULL); }
-	| IF OPEN_PARENTHESIS dslExpression CLOSE_PARENTHESIS statement ELSE statement
+	| IF OPEN_PARENTHESIS expression CLOSE_PARENTHESIS statement ELSE statement
 		{ $$ = IfStatementSemanticAction($3, $5, $7); }
 	;
 
-whileStatement: WHILE OPEN_PARENTHESIS dslExpression CLOSE_PARENTHESIS statement
+whileStatement: WHILE OPEN_PARENTHESIS expression CLOSE_PARENTHESIS statement
 		{ $$ = WhileStatementSemanticAction($3, $5); }
 	;
 
-forStatement: FOR OPEN_PARENTHESIS forInitializer SEMICOLON dslExpression SEMICOLON dslExpression CLOSE_PARENTHESIS statement
+forStatement: FOR OPEN_PARENTHESIS forInitializer SEMICOLON expression SEMICOLON expression CLOSE_PARENTHESIS statement
 		{ $$ = ForStatementSemanticAction($3, $5, $7, $9); }
 	;
 
 forInitializer: variableDeclarationBase					{ $$ = $1; }
-	| dslExpression										{ $$ = ExpressionStatementSemanticAction($1); }
+	| expression										{ $$ = ExpressionStatementSemanticAction($1); }
 	;
 
 initializerOptional: %empty								{ $$ = NULL; }
-	| ASSIGN dslExpression								{ $$ = $2; }
+	| ASSIGN expression								{ $$ = $2; }
 	;
 
 returnStatement: RETURN expressionOptional SEMICOLON	{ $$ = ReturnStatementSemanticAction($2); }
 	;
 
-expressionStatement: dslExpression SEMICOLON			{ $$ = ExpressionStatementSemanticAction($1); }
+expressionStatement: expression SEMICOLON			{ $$ = ExpressionStatementSemanticAction($1); }
 	;
 
 expressionOptional: %empty								{ $$ = NULL; }
-	| dslExpression										{ $$ = $1; }
+	| expression										{ $$ = $1; }
 	;
 
-dslExpression: assignmentExpression						{ $$ = $1; }
+expression: assignmentExpression						{ $$ = $1; }
 	;
 
 assignmentExpression: logicalOrExpression				{ $$ = $1; }
@@ -336,7 +336,7 @@ unaryExpression: postfixExpression						{ $$ = $1; }
 postfixExpression: primaryExpression					{ $$ = $1; }
 	| postfixExpression DOT IDENTIFIER					{ $$ = FieldAccessExpressionSemanticAction($1, $3); }
 	| postfixExpression ARROW IDENTIFIER				{ $$ = ArrowAccessExpressionSemanticAction($1, $3); }
-	| postfixExpression OPEN_BRACKET dslExpression CLOSE_BRACKET
+	| postfixExpression OPEN_BRACKET expression CLOSE_BRACKET
 		{ $$ = IndexExpressionSemanticAction($1, $3); }
 	| postfixExpression OPEN_PARENTHESIS argumentList CLOSE_PARENTHESIS
 		{ $$ = CallExpressionSemanticAction($1, $3); }
@@ -354,12 +354,12 @@ primaryExpression: INTEGER								{ $$ = IntegerExpressionSemanticAction($1); }
 	| THIS												{ $$ = ThisExpressionSemanticAction(); }
 	| NEW IDENTIFIER OPEN_PARENTHESIS argumentList CLOSE_PARENTHESIS
 		{ $$ = NewExpressionSemanticAction($2, $4); }
-	| OPEN_PARENTHESIS dslExpression CLOSE_PARENTHESIS	{ $$ = $2; }
+	| OPEN_PARENTHESIS expression CLOSE_PARENTHESIS	{ $$ = $2; }
 	;
 
 argumentList: %empty									{ $$ = NULL; }
-	| dslExpression										{ $$ = ArgumentListSemanticAction($1); }
-	| argumentList COMMA dslExpression					{ $$ = AppendArgumentSemanticAction($1, $3); }
+	| expression										{ $$ = ArgumentListSemanticAction($1); }
+	| argumentList COMMA expression					{ $$ = AppendArgumentSemanticAction($1, $3); }
 	;
 
 parameterList: %empty									{ $$ = NULL; }

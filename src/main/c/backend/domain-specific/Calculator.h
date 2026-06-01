@@ -25,7 +25,10 @@ typedef struct {
 	int value;
 } ComputationResult;
 
+/* Legacy. */
+#if 0
 typedef ComputationResult (*BinaryOperator)(const int, const int);
+#endif
 
 /** Arithmetic operations. */
 
@@ -33,6 +36,9 @@ ComputationResult add(const int leftAddend, const int rightAddend);
 ComputationResult divide(const int dividend, const int divisor);
 ComputationResult multiply(const int multiplicand, const int multiplier);
 ComputationResult subtract(const int minuend, const int subtract);
+
+/* Legacy. */
+#if 0
 
 /**
  * Computes the final value of a mathematical constant.
@@ -48,6 +54,8 @@ ComputationResult computeExpression(Expression * expression);
  * Computes the final value of a mathematical factor.
  */
 ComputationResult computeFactor(Factor * factor);
+
+#endif
 
 /**
  * Computes the program value using the current compiler state.

@@ -16,9 +16,9 @@ ModuleDestructor initializeBisonActionsModule();
  * Bison semantic actions.
  */
 
-DslProgram * ProgramSemanticAction(DslProgram * program);
-DslProgram * EmptyDeclarationListSemanticAction();
-DslProgram * MainDeclarationSemanticAction(DslProgram * program, StatementList * mainBody);
+Program * ProgramSemanticAction(Program * program);
+Program * EmptyDeclarationListSemanticAction();
+Program * MainDeclarationSemanticAction(Program * program, StatementList * mainBody);
 
 Type * BaseTypeSemanticAction(TypeKind kind);
 Type * TypeModifierSemanticAction(char isSigned, char isUnsigned, char isShort, char isLong);
@@ -30,7 +30,7 @@ Type * ArrayTypeNoSizeSemanticAction(Type * inner);
 Type * BuildClassTypeSemanticAction(char * className, Type * typeTail);
 
 Class * ClassSemanticAction(char * name, char * parentName, MemberList * members);
-DslProgram * AddClassSemanticAction(DslProgram * program, Class * classNode);
+Program * AddClassSemanticAction(Program * program, Class * classNode);
 
 Parameter * ParameterSemanticAction(Type * type, char * name);
 Parameter * AppendParameterSemanticAction(Parameter * list, Parameter * param);
@@ -46,37 +46,37 @@ MemberList * SetMemberVisibilitySemanticAction(MemberList * list, Visibility vis
 MemberList * MergeMemberListsSemanticAction(MemberList * dst, MemberList * src);
 
 Function * FunctionSemanticAction(Type * returnType, char * name, Parameter * parameters, StatementList * body);
-DslProgram * AddFunctionSemanticAction(DslProgram * program, Function * function);
+Program * AddFunctionSemanticAction(Program * program, Function * function);
 
-DslExpression * IntegerExpressionSemanticAction(int value);
-DslExpression * FloatExpressionSemanticAction(double value);
-DslExpression * StringExpressionSemanticAction(char * value);
-DslExpression * CharExpressionSemanticAction(char value);
-DslExpression * BooleanExpressionSemanticAction(int value);
-DslExpression * IdentifierExpressionSemanticAction(char * name);
-DslExpression * ThisExpressionSemanticAction();
-DslExpression * NewExpressionSemanticAction(char * className, ArgumentList * arguments);
+Expression * IntegerExpressionSemanticAction(int value);
+Expression * FloatExpressionSemanticAction(double value);
+Expression * StringExpressionSemanticAction(char * value);
+Expression * CharExpressionSemanticAction(char value);
+Expression * BooleanExpressionSemanticAction(int value);
+Expression * IdentifierExpressionSemanticAction(char * name);
+Expression * ThisExpressionSemanticAction();
+Expression * NewExpressionSemanticAction(char * className, ArgumentList * arguments);
 
-ArgumentList * ArgumentListSemanticAction(DslExpression * expr);
-ArgumentList * AppendArgumentSemanticAction(ArgumentList * list, DslExpression * expr);
+ArgumentList * ArgumentListSemanticAction(Expression * expr);
+ArgumentList * AppendArgumentSemanticAction(ArgumentList * list, Expression * expr);
 
-DslExpression * UnaryExpressionSemanticAction(UnaryOperator operator, DslExpression * operand);
-DslExpression * BinaryExpressionSemanticAction(DslExpression * left, DslBinaryOperator operator, DslExpression * right);
+Expression * UnaryExpressionSemanticAction(UnaryOperator operator, Expression * operand);
+Expression * BinaryExpressionSemanticAction(Expression * left, BinaryOperator operator, Expression * right);
 
-DslExpression * FieldAccessExpressionSemanticAction(DslExpression * object, char * field);
-DslExpression * ArrowAccessExpressionSemanticAction(DslExpression * object, char * field);
-DslExpression * IndexExpressionSemanticAction(DslExpression * array, DslExpression * index);
-DslExpression * CallExpressionSemanticAction(DslExpression * callee, ArgumentList * arguments);
-DslExpression * PostfixIncrementExpressionSemanticAction(DslExpression * operand);
-DslExpression * PostfixDecrementExpressionSemanticAction(DslExpression * operand);
+Expression * FieldAccessExpressionSemanticAction(Expression * object, char * field);
+Expression * ArrowAccessExpressionSemanticAction(Expression * object, char * field);
+Expression * IndexExpressionSemanticAction(Expression * array, Expression * index);
+Expression * CallExpressionSemanticAction(Expression * callee, ArgumentList * arguments);
+Expression * PostfixIncrementExpressionSemanticAction(Expression * operand);
+Expression * PostfixDecrementExpressionSemanticAction(Expression * operand);
 
 StatementList * AppendStatementSemanticAction(StatementList * list, Statement * stmt);
-Statement * VariableDeclarationSemanticAction(Type * type, char * name, DslExpression * initializer);
-Statement * IfStatementSemanticAction(DslExpression * condition, Statement * thenBranch, Statement * elseBranch);
-Statement * WhileStatementSemanticAction(DslExpression * condition, Statement * body);
-Statement * ForStatementSemanticAction(Statement * initializer, DslExpression * condition, DslExpression * step, Statement * body);
-Statement * ReturnStatementSemanticAction(DslExpression * value);
-Statement * ExpressionStatementSemanticAction(DslExpression * expr);
+Statement * VariableDeclarationSemanticAction(Type * type, char * name, Expression * initializer);
+Statement * IfStatementSemanticAction(Expression * condition, Statement * thenBranch, Statement * elseBranch);
+Statement * WhileStatementSemanticAction(Expression * condition, Statement * body);
+Statement * ForStatementSemanticAction(Statement * initializer, Expression * condition, Expression * step, Statement * body);
+Statement * ReturnStatementSemanticAction(Expression * value);
+Statement * ExpressionStatementSemanticAction(Expression * expr);
 Statement * BlockStatementSemanticAction(StatementList * body);
 
 #endif
