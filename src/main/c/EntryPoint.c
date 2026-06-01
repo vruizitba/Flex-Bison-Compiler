@@ -1,5 +1,6 @@
 #include "backend/code-generation/Generator.h"
 #include "backend/domain-specific/Calculator.h"
+#include "backend/semantic-analysis/SemanticAnalysis.h"
 #include "frontend/Frontend.h"
 #include "frontend/lexical-analysis/FlexActions.h"
 #include "frontend/syntactic-analysis/BisonActions.h"
@@ -21,7 +22,7 @@ const int main(const int length, const char ** arguments) {
 	}
 	CompilerState compilerState = {
 		.abstractSyntaxtTree = NULL,
-		.value = 0
+		.symbolTable = NULL
 	};
 	ModuleDestructor moduleDestructors[] = {
 		initializeAbstractSyntaxTreeModule(),
@@ -29,26 +30,23 @@ const int main(const int length, const char ** arguments) {
 		initializeBisonActionsModule(&compilerState),
 		initializeFrontendModule(lexicalAnalyzer),
 		initializeCalculatorModule(),
-		initializeGeneratorModule()
+		initializeGeneratorModule(),
+		initializeSemanticAnalysisModule()
 	};
 	CompilationStatus compilationStatus = executeSyntacticAnalysis();
 	Program * program = compilerState.abstractSyntaxtTree;
 	if (compilationStatus == SUCCEEDED) {
 		// ----------------------------------------------------------------------------------------
 		// Beginning of the Backend... ------------------------------------------------------------
-		/*logDebugging(logger, "Computing expression value...");
-		ComputationResult computationResult = executeCalculator(&compilerState);
-		if (computationResult.succeeded) {
-			compilerState.value = computationResult.value;
+		compilationStatus = executeSemanticAnalysis(&compilerState);
+		if (compilationStatus == SUCCEEDED) {
 			executeGenerator(&compilerState);
 		}
 		else {
-			logError(logger, "The computation phase rejects the input program.");
-			compilationStatus = FAILED;
+			logError(logger, "The semantic-analysis phase rejects the input program.");
 		}
 		// ...end of the Backend. -----------------------------------------------------------------
 		// ----------------------------------------------------------------------------------------
-		*/
 	}
 	else {
 		logError(logger, "The syntactic-analysis phase rejects the input program.");
