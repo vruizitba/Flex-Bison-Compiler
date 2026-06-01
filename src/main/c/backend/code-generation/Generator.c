@@ -24,6 +24,7 @@ ModuleDestructor initializeGeneratorModule() {
 
 static char * _indentation(const unsigned int indentationLevel);
 static void _output(const unsigned int indentationLevel, const char * const format, ...);
+static void _generatePrologue(void);
 
 /* Legacy. */
 #if 0
@@ -173,6 +174,19 @@ static void _output(const unsigned int indentationLevel, const char * const form
 	va_end(arguments);
 }
 
+static void _generatePrologue(void) {
+	_output(0, "%s",
+		"#include <stdlib.h>\n"
+		"#include <string.h>\n"
+		"#include <stdio.h>\n\n"
+		"static void * _xmalloc(size_t size) {\n"
+		"    void * ptr = malloc(size);\n"
+		"    if (!ptr) { fprintf(stderr, \"out of memory\\n\"); exit(1); }\n"
+		"    return ptr;\n"
+		"}\n\n"
+	);
+}
+
 /** PUBLIC FUNCTIONS */
 
 void executeGenerator(CompilerState * compilerState) {
@@ -183,4 +197,11 @@ void executeGenerator(CompilerState * compilerState) {
 	_generateEpilogue(compilerState->value);
 	logDebugging(_logger, "Generation is done.");
 	*/
+	Program * program = compilerState->abstractSyntaxtTree;
+	if (program == NULL) {
+		return;
+	}
+	logDebugging(_logger, "Generating C output...");
+	_generatePrologue();
+	logDebugging(_logger, "Generation done.");
 }
