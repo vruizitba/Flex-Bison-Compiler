@@ -21,13 +21,17 @@ SymbolTable * createSymbolTable();
 void destroySymbolTable(SymbolTable * table);
 
 /* ---- Registration ---- */
-void registerClass(SymbolTable * table, Class * classNode);
-void registerFunction(SymbolTable * table, Function * function);
+/** Returns false if a class with the same name is already registered. */
+bool registerClass(SymbolTable * table, Class * classNode);
+/** Returns false if a function with the same name is already registered. */
+bool registerFunction(SymbolTable * table, Function * function);
 
 /* ---- Lookup ---- */
 Class * lookupClass(SymbolTable * table, const char * name);
 Function * lookupFunction(SymbolTable * table, const char * name);
+/** Returns a heap-allocated FieldInfo (caller frees), or NULL if not found. */
 FieldInfo * lookupField(SymbolTable * table, const char * className, const char * fieldName);
+/** Matches by name and param count (argCount < 0 = any arity). Returns a heap-allocated MethodInfo (caller frees), or NULL if not found. */
 MethodInfo * lookupMethod(SymbolTable * table, const char * className, const char * methodName, Type ** argTypes, int argCount);
 
 /* ---- Scope stack ---- */
