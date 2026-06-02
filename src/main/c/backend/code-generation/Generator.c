@@ -25,6 +25,11 @@ ModuleDestructor initializeGeneratorModule() {
 static char * _indentation(const unsigned int indentationLevel);
 static void _output(const unsigned int indentationLevel, const char * const format, ...);
 static void _generatePrologue(void);
+static char * _generateTypeName(Type * type);
+static void _generateForwardDeclarations(Program * program);
+static void _generateField(Field * field);
+static void _generateClass(Class * classNode);
+static void _generateClassesInOrder(Program * program);
 
 /* Legacy. */
 #if 0
@@ -174,6 +179,89 @@ static void _output(const unsigned int indentationLevel, const char * const form
 	va_end(arguments);
 }
 
+/**
+ * Returns a heap-allocated C type string for the given DSL type.
+ * bool  → char
+ * string → char *
+ * class → ClassName *  (class variables are always pointers)
+ * Caller must free() the result.
+ */
+static char * _generateTypeName(Type * type) {
+	if (type == NULL) {
+		return strdup("void");
+	}
+	switch (type->kind) {
+		case TYPEKIND_INT:    return strdup("int");
+		case TYPEKIND_BOOL:   return strdup("char");
+		case TYPEKIND_STRING: return strdup("char *");
+		case TYPEKIND_CHAR:   return strdup("char");
+		case TYPEKIND_FLOAT:  return strdup("float");
+		case TYPEKIND_DOUBLE: return strdup("double");
+		case TYPEKIND_VOID:   return strdup("void");
+		case TYPEKIND_CLASS:  return concatenate(2, type->className, " *");
+		default:
+			logError(_logger, "Unknown type kind: %d", type->kind);
+			return strdup("void");
+	}
+}
+
+static void _generateField(Field * field) {
+	char * typeName = _generateTypeName(field->type);
+	_output(1, "%s %s;\n", typeName, field->name);
+	free(typeName);
+}
+
+static void _generateClass(Class * classNode) {
+	_output(0, "struct %s {\n", classNode->name);
+	if (classNode->parentName != NULL) {
+		_output(1, "%s parent;\n", classNode->parentName);
+	}
+	for (Field * f = classNode->fields; f != NULL; f = f->next) {
+		_generateField(f);
+	}
+	_output(0, "};\n\n");
+}
+
+static void _generateClassesInOrder(Program * program) {
+	int total = 0;
+	for (Class * c = program->classes; c != NULL; c = c->next) {
+		total++;
+	}
+	bool * emitted = calloc(total, sizeof(bool));
+	int done = 0;
+	while (done < total) {
+		int idx = 0;
+		for (Class * c = program->classes; c != NULL; c = c->next, idx++) {
+			if (emitted[idx]) {
+				continue;
+			}
+			bool parentReady = true;
+			if (c->parentName != NULL) {
+				int pidx = 0;
+				for (Class * p = program->classes; p != NULL; p = p->next, pidx++) {
+					if (strcmp(p->name, c->parentName) == 0 && !emitted[pidx]) {
+						parentReady = false;
+						break;
+					}
+				}
+			}
+			if (parentReady) {
+				_generateClass(c);
+				emitted[idx] = true;
+				done++;
+			}
+		}
+	}
+	free(emitted);
+}
+
+static void _generateForwardDeclarations(Program * program) {
+	for (Class * c = program->classes; c != NULL; c = c->next) {
+		_output(0, "typedef struct %s %s;\n", c->name, c->name);
+	}
+	_output(0, "\n");
+}
+
 static void _generatePrologue(void) {
 	_output(0, "%s",
 		"#include <stdlib.h>\n"
@@ -203,5 +291,7 @@ void executeGenerator(CompilerState * compilerState) {
 	}
 	logDebugging(_logger, "Generating C output...");
 	_generatePrologue();
+	_generateForwardDeclarations(program);
+	_generateClassesInOrder(program);
 	logDebugging(_logger, "Generation done.");
 }
