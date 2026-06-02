@@ -30,6 +30,12 @@ static void _generateForwardDeclarations(Program * program);
 static void _generateField(Field * field);
 static void _generateClass(Class * classNode);
 static void _generateClassesInOrder(Program * program);
+static char * _manglingTypeName(Type * type);
+static char * _generateMangling(Parameter * params);
+static void _generateParams(Parameter * params, const char * className);
+static void _generateMethod(Class * classNode, Method * method);
+static void _generateConstructor(Class * classNode, Method * method);
+static void _generateClassMethods(Class * classNode);
 
 /* Legacy. */
 #if 0
@@ -179,13 +185,7 @@ static void _output(const unsigned int indentationLevel, const char * const form
 	va_end(arguments);
 }
 
-/**
- * Returns a heap-allocated C type string for the given DSL type.
- * bool  → char
- * string → char *
- * class → ClassName *  (class variables are always pointers)
- * Caller must free() the result.
- */
+/** DSL type → C type string (heap-allocated, caller must free). bool→char, string→char*, class→ClassName*. */
 static char * _generateTypeName(Type * type) {
 	if (type == NULL) {
 		return strdup("void");
@@ -262,6 +262,92 @@ static void _generateForwardDeclarations(Program * program) {
 	_output(0, "\n");
 }
 
+static char * _manglingTypeName(Type * type) {
+	if (type == NULL) return strdup("void");
+	switch (type->kind) {
+		case TYPEKIND_INT:    return strdup("int");
+		case TYPEKIND_BOOL:   return strdup("char");
+		case TYPEKIND_STRING: return strdup("charptr");
+		case TYPEKIND_CHAR:   return strdup("char");
+		case TYPEKIND_FLOAT:  return strdup("float");
+		case TYPEKIND_DOUBLE: return strdup("double");
+		case TYPEKIND_VOID:   return strdup("void");
+		case TYPEKIND_CLASS:  return strdup(type->className);
+		default:              return strdup("unknown");
+	}
+}
+
+/** Generates the mangling suffix for a parameter list. */
+
+static char * _generateMangling(Parameter * params) {
+	char * result = strdup("");
+	if (params == NULL){
+		return result;
+	} 
+	for (Parameter * p = params; p != NULL; p = p->next) {
+		char * typeName = _manglingTypeName(p->type);
+		char * sep = (p == params) ? "__" : "_";
+		char * next = concatenate(3, result, sep, typeName);
+		free(result);
+		free(typeName);
+		result = next;
+	}
+	return result;
+}
+
+/** Emits the parameter list to stdout, including self if className is non-NULL. */
+static void _generateParams(Parameter * params, const char * className) {
+	_output(0, "(");
+	bool first = true;
+	if (className != NULL) {
+		_output(0, "%s * self", className);
+		first = false;
+	}
+	for (Parameter * p = params; p != NULL; p = p->next) {
+		if (!first) {
+			_output(0, ", ");
+		}
+		char * typeName = _generateTypeName(p->type);
+		_output(0, "%s %s", typeName, p->name);
+		free(typeName);
+		first = false;
+	}
+	_output(0, ")");
+}
+
+static void _generateMethod(Class * classNode, Method * method) {
+	char * mangling = _generateMangling(method->parameters);
+	char * retType = _generateTypeName(method->returnType);
+	const char * selfClass = method->isStatic ? NULL : classNode->name;
+	_output(0, "%s %s__%s%s", retType, classNode->name, method->name, mangling);
+	free(mangling);
+	free(retType);
+	_generateParams(method->parameters, selfClass);
+	_output(0, " {\n");
+	_output(0, "}\n\n");
+}
+
+static void _generateConstructor(Class * classNode, Method * method) {
+	char * mangling = _generateMangling(method->parameters);
+	_output(0, "%s * %s__new%s", classNode->name, classNode->name, mangling);
+	free(mangling);
+	_generateParams(method->parameters, NULL);
+	_output(0, " {\n");
+	_output(1, "%s * self = _xmalloc(sizeof(%s));\n", classNode->name, classNode->name);
+	_output(1, "return self;\n");
+	_output(0, "}\n\n");
+}
+
+static void _generateClassMethods(Class * classNode) {
+	for (Method * m = classNode->methods; m != NULL; m = m->next) {
+		if (m->isConstructor) {
+			_generateConstructor(classNode, m);
+		} else {
+			_generateMethod(classNode, m);
+		}
+	}
+}
+
 static void _generatePrologue(void) {
 	_output(0, "%s",
 		"#include <stdlib.h>\n"
@@ -293,5 +379,8 @@ void executeGenerator(CompilerState * compilerState) {
 	_generatePrologue();
 	_generateForwardDeclarations(program);
 	_generateClassesInOrder(program);
+	for (Class * c = program->classes; c != NULL; c = c->next) {
+		_generateClassMethods(c);
+	}
 	logDebugging(_logger, "Generation done.");
 }
