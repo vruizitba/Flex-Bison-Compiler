@@ -47,6 +47,8 @@ static void _generateIfStatement(Statement * stmt, unsigned int indent);
 static void _generateWhileStatement(Statement * stmt, unsigned int indent);
 static void _generateForStatement(Statement * stmt, unsigned int indent);
 static void _generateForInitializer(Statement * stmt);
+static void _generateFunction(Function * function);
+static void _generateMain(StatementList * body);
 
 /* Legacy. */
 #if 0
@@ -476,6 +478,22 @@ static void _generatePrologue(void) {
 	);
 }
 
+static void _generateFunction(Function * function) {
+	char * retType = _generateTypeName(function->returnType);
+	_output(0, "%s %s", retType, function->name);
+	free(retType);
+	_generateParams(function->parameters, NULL);
+	_output(0, " {\n");
+	_generateStatementList(function->body, 1);
+	_output(0, "}\n\n");
+}
+
+static void _generateMain(StatementList * body) {
+	_output(0, "int main(void) {\n");
+	_generateStatementList(body, 1);
+	_output(0, "}\n");
+}
+
 /** PUBLIC FUNCTIONS */
 
 void executeGenerator(CompilerState * compilerState) {
@@ -496,6 +514,12 @@ void executeGenerator(CompilerState * compilerState) {
 	_generateClassesInOrder(program);
 	for (Class * c = program->classes; c != NULL; c = c->next) {
 		_generateClassMethods(c);
+	}
+	for (Function * f = program->functions; f != NULL; f = f->next) {
+		_generateFunction(f);
+	}
+	if (program->mainBody != NULL) {
+		_generateMain(program->mainBody);
 	}
 	logDebugging(_logger, "Generation done.");
 }
