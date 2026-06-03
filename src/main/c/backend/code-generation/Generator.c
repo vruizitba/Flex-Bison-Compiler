@@ -36,6 +36,17 @@ static void _generateParams(Parameter * params, const char * className);
 static void _generateMethod(Class * classNode, Method * method);
 static void _generateConstructor(Class * classNode, Method * method);
 static void _generateClassMethods(Class * classNode);
+static void _generateExpression(Expression * expr);
+static void _generateStatement(Statement * stmt, unsigned int indent);
+static void _generateStatementList(StatementList * list, unsigned int indent);
+static void _generateBlockStatement(Statement * stmt, unsigned int indent);
+static void _generateReturnStatement(Statement * stmt, unsigned int indent);
+static void _generateExpressionStatement(Statement * stmt, unsigned int indent);
+static void _generateVariableDeclaration(Statement * stmt, unsigned int indent);
+static void _generateIfStatement(Statement * stmt, unsigned int indent);
+static void _generateWhileStatement(Statement * stmt, unsigned int indent);
+static void _generateForStatement(Statement * stmt, unsigned int indent);
+static void _generateForInitializer(Statement * stmt);
 
 /* Legacy. */
 #if 0
@@ -315,6 +326,108 @@ static void _generateParams(Parameter * params, const char * className) {
 	_output(0, ")");
 }
 
+static void _generateExpression(Expression * expr) {
+	logDebugging(_logger, "TODO: _generateExpression");
+}
+
+static void _generateBlockStatement(Statement * stmt, unsigned int indent) {
+	_output(indent, "{\n");
+	_generateStatementList(stmt->block, indent + 1);
+	_output(indent, "}\n");
+}
+
+static void _generateReturnStatement(Statement * stmt, unsigned int indent) {
+	_output(indent, "return ");
+	_generateExpression(stmt->returnStatement.value);
+	_output(0, ";\n");
+}
+
+static void _generateExpressionStatement(Statement * stmt, unsigned int indent) {
+	_output(indent, "");
+	_generateExpression(stmt->expressionStatement);
+	_output(0, ";\n");
+}
+
+static void _generateVariableDeclaration(Statement * stmt, unsigned int indent) {
+	char * typeName = _generateTypeName(stmt->variableDeclaration.type);
+	if (stmt->variableDeclaration.initializer != NULL) {
+		_output(indent, "%s %s = ", typeName, stmt->variableDeclaration.name);
+		_generateExpression(stmt->variableDeclaration.initializer);
+		_output(0, ";\n");
+	} else {
+		_output(indent, "%s %s;\n", typeName, stmt->variableDeclaration.name);
+	}
+	free(typeName);
+}
+
+static void _generateIfStatement(Statement * stmt, unsigned int indent) {
+	_output(indent, "if (");
+	_generateExpression(stmt->ifStatement.condition);
+	_output(0, ") {\n");
+	_generateStatement(stmt->ifStatement.thenBranch, indent + 1);
+	if (stmt->ifStatement.elseBranch != NULL) {
+		_output(indent, "} else {\n");
+		_generateStatement(stmt->ifStatement.elseBranch, indent + 1);
+	}
+	_output(indent, "}\n");
+}
+
+static void _generateWhileStatement(Statement * stmt, unsigned int indent) {
+	_output(indent, "while (");
+	_generateExpression(stmt->whileStatement.condition);
+	_output(0, ") {\n");
+	_generateStatement(stmt->whileStatement.body, indent + 1);
+	_output(indent, "}\n");
+}
+
+static void _generateForInitializer(Statement * stmt) {
+	if (stmt == NULL) return;
+	if (stmt->kind == STATEMENT_VARIABLE_DECLARATION) {
+		char * typeName = _generateTypeName(stmt->variableDeclaration.type);
+		_output(0, "%s %s", typeName, stmt->variableDeclaration.name);
+		free(typeName);
+		if (stmt->variableDeclaration.initializer != NULL) {
+			_output(0, " = ");
+			_generateExpression(stmt->variableDeclaration.initializer);
+		}
+	} else if (stmt->kind == STATEMENT_EXPRESSION) {
+		_generateExpression(stmt->expressionStatement);
+	}
+}
+
+static void _generateForStatement(Statement * stmt, unsigned int indent) {
+	_output(indent, "for (");
+	_generateForInitializer(stmt->forStatement.initializer);
+	_output(0, "; ");
+	_generateExpression(stmt->forStatement.condition);
+	_output(0, "; ");
+	_generateExpression(stmt->forStatement.step);
+	_output(0, ") {\n");
+	_generateStatement(stmt->forStatement.body, indent + 1);
+	_output(indent, "}\n");
+}
+
+static void _generateStatement(Statement * stmt, unsigned int indent) {
+	if (stmt == NULL) return;
+	switch (stmt->kind) {
+		case STATEMENT_BLOCK:              return _generateBlockStatement(stmt, indent);
+		case STATEMENT_RETURN:             return _generateReturnStatement(stmt, indent);
+		case STATEMENT_EXPRESSION:         return _generateExpressionStatement(stmt, indent);
+		case STATEMENT_VARIABLE_DECLARATION: return _generateVariableDeclaration(stmt, indent);
+		case STATEMENT_IF:                 return _generateIfStatement(stmt, indent);
+		case STATEMENT_WHILE:              return _generateWhileStatement(stmt, indent);
+		case STATEMENT_FOR:                return _generateForStatement(stmt, indent);
+		default:
+			logDebugging(_logger, "TODO: statement kind %d", stmt->kind);
+	}
+}
+
+static void _generateStatementList(StatementList * list, unsigned int indent) {
+	for (StatementList * s = list; s != NULL; s = s->next) {
+		_generateStatement(s->statement, indent);
+	}
+}
+
 static void _generateMethod(Class * classNode, Method * method) {
 	char * mangling = _generateMangling(method->parameters);
 	char * retType = _generateTypeName(method->returnType);
@@ -324,6 +437,7 @@ static void _generateMethod(Class * classNode, Method * method) {
 	free(retType);
 	_generateParams(method->parameters, selfClass);
 	_output(0, " {\n");
+	_generateStatementList(method->body, 1);
 	_output(0, "}\n\n");
 }
 
@@ -334,6 +448,7 @@ static void _generateConstructor(Class * classNode, Method * method) {
 	_generateParams(method->parameters, NULL);
 	_output(0, " {\n");
 	_output(1, "%s * self = _xmalloc(sizeof(%s));\n", classNode->name, classNode->name);
+	_generateStatementList(method->body, 1);
 	_output(1, "return self;\n");
 	_output(0, "}\n\n");
 }
