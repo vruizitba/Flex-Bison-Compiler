@@ -6,8 +6,26 @@
 
 #define INITIAL_CAPACITY 8
 
-/* TYPE_ERROR sentinel — static, never freed. */
-static Type _typeErrorSentinel = { .kind = TYPEKIND_ERROR };
+/* Primitive type sentinels — static, never freed. */
+static Type _typeErrorSentinel   = { .kind = TYPEKIND_ERROR  };
+static Type _typeIntSentinel     = { .kind = TYPEKIND_INT    };
+static Type _typeFloatSentinel   = { .kind = TYPEKIND_FLOAT  };
+static Type _typeDoubleSentinel  = { .kind = TYPEKIND_DOUBLE };
+static Type _typeCharSentinel    = { .kind = TYPEKIND_CHAR   };
+static Type _typeBoolSentinel    = { .kind = TYPEKIND_BOOL   };
+static Type _typeStringSentinel  = { .kind = TYPEKIND_STRING };
+static Type _typeVoidSentinel    = { .kind = TYPEKIND_VOID   };
+
+typedef struct {
+    const char * name;
+    Type * type;
+} VarEntry;
+
+typedef struct {
+    VarEntry * varEntries;
+    int varCount;
+    int varCapacity;
+} Scope;
 
 struct SymbolTable {
     Class ** classes;
@@ -17,6 +35,11 @@ struct SymbolTable {
     Function ** functions;
     int functionCount;
     int functionCapacity;
+
+    /* Scope stack — index 0 is the outermost scope, top is scopeCount-1. */
+    Scope * scopes;
+    int scopeCount;
+    int scopeCapacity;
 
     const char * currentClass;
     const char * currentFunction;
@@ -41,12 +64,24 @@ SymbolTable * createSymbolTable() {
         free(table);
         return NULL;
     }
+    table->scopeCapacity = INITIAL_CAPACITY;
+    table->scopes = malloc(table->scopeCapacity * sizeof(Scope));
+    if (table->scopes == NULL) {
+        free(table->functions);
+        free(table->classes);
+        free(table);
+        return NULL;
+    }
     return table;
 }
 
 void destroySymbolTable(SymbolTable * table) {
-    free(table->classes);
+    for (int i = 0; i < table->scopeCount; i++) {
+        free(table->scopes[i].varEntries);
+    }
+    free(table->scopes);
     free(table->functions);
+    free(table->classes);
     free(table);
 }
 
@@ -158,38 +193,147 @@ MethodInfo * lookupMethod(SymbolTable * table, const char * className, const cha
 
 /* ---- Scope stack ---- */
 void pushScope(SymbolTable * table) {
-    (void)table;
+    if (table->scopeCount == table->scopeCapacity) {
+        int newCapacity = table->scopeCapacity * 2;
+        Scope * resized = realloc(table->scopes, newCapacity * sizeof(Scope));
+        if (resized == NULL) {
+            return;
+        }
+        table->scopes = resized;
+        table->scopeCapacity = newCapacity;
+    }
+    Scope * scope = &table->scopes[table->scopeCount++];
+    scope->varCapacity = INITIAL_CAPACITY;
+    scope->varCount = 0;
+    scope->varEntries = malloc(scope->varCapacity * sizeof(VarEntry));
 }
 
 void popScope(SymbolTable * table) {
-    (void)table;
+    if (table->scopeCount == 0) {
+        return;
+    }
+    table->scopeCount--;
+    free(table->scopes[table->scopeCount].varEntries);
 }
 
+/* Shadowing forbidden: checks every active scope, not just the current one. */
 bool declareVariable(SymbolTable * table, const char * name, Type * type) {
-    (void)table;
-    (void)name;
-    (void)type;
+    for (int i = 0; i < table->scopeCount; i++) {
+        Scope * scope = &table->scopes[i];
+        for (int j = 0; j < scope->varCount; j++) {
+            if (strcmp(scope->varEntries[j].name, name) == 0) {
+                return false;
+            }
+        }
+    }
+    Scope * current = &table->scopes[table->scopeCount - 1];
+    if (current->varCount == current->varCapacity) {
+        int newCapacity = current->varCapacity * 2;
+        VarEntry * resized = realloc(current->varEntries, newCapacity * sizeof(VarEntry));
+        if (resized == NULL) {
+            return false;
+        }
+        current->varEntries = resized;
+        current->varCapacity = newCapacity;
+    }
+    current->varEntries[current->varCount].name = name;
+    current->varEntries[current->varCount].type = type;
+    current->varCount++;
     return true;
 }
 
 Type * lookupVariable(SymbolTable * table, const char * name) {
-    (void)table;
-    (void)name;
+    for (int i = table->scopeCount - 1; i >= 0; i--) {
+        Scope * scope = &table->scopes[i];
+        for (int j = 0; j < scope->varCount; j++) {
+            if (strcmp(scope->varEntries[j].name, name) == 0) {
+                return scope->varEntries[j].type;
+            }
+        }
+    }
     return NULL;
 }
 
 /* ---- Type checker ---- */
 Type * typeOf(SymbolTable * table, Expression * expr) {
-    (void)table;
-    (void)expr;
-    return &_typeErrorSentinel;
+    if (expr == NULL) {
+        return &_typeErrorSentinel;
+    }
+    switch (expr->kind) {
+        case EXPRESSION_INTEGER:    return &_typeIntSentinel;
+        case EXPRESSION_FLOAT:      return &_typeFloatSentinel;
+        case EXPRESSION_STRING:     return &_typeStringSentinel;
+        case EXPRESSION_CHAR:       return &_typeCharSentinel;
+        case EXPRESSION_BOOLEAN:    return &_typeBoolSentinel;
+        case EXPRESSION_THIS: {
+            const char * className = getCurrentClass(table);
+            if (className == NULL) {
+                return &_typeErrorSentinel;
+            }
+            Type * type = calloc(1, sizeof(Type));
+            if (type == NULL) {
+                return &_typeErrorSentinel;
+            }
+            type->kind = TYPEKIND_CLASS;
+            type->className = (char *)className;
+            return type;
+        }
+        case EXPRESSION_IDENTIFIER: {
+            Type * type = lookupVariable(table, expr->identifier);
+            return type != NULL ? type : &_typeErrorSentinel;
+        }
+        case EXPRESSION_NEW: {
+            if (lookupClass(table, expr->newExpression.className) == NULL) {
+                return &_typeErrorSentinel;
+            }
+            Type * type = calloc(1, sizeof(Type));
+            if (type == NULL) {
+                return &_typeErrorSentinel;
+            }
+            type->kind = TYPEKIND_CLASS;
+            type->className = expr->newExpression.className;
+            return type;
+        }
+        case EXPRESSION_BINARY: {
+            Type * left = typeOf(table, expr->binary.left);
+            Type * right = typeOf(table, expr->binary.right);
+            if (isTypeError(left) || isTypeError(right)) {
+                return &_typeErrorSentinel;
+            }
+            return left;
+        }
+        case EXPRESSION_UNARY:
+            return typeOf(table, expr->unary.operand);
+        default:
+            return &_typeErrorSentinel;
+    }
 }
 
 bool isAssignable(SymbolTable * table, Type * from, Type * to) {
-    (void)table;
-    (void)from;
-    (void)to;
-    return true;
+    if (from == NULL || to == NULL) {
+        return false;
+    }
+    if (isTypeError(from) || isTypeError(to)) {
+        return false;
+    }
+    if (from->kind != to->kind) {
+        return false;
+    }
+    if (from->kind != TYPEKIND_CLASS) {
+        return true;
+    }
+    /* Class types: exact match or subclass of target. */
+    if (strcmp(from->className, to->className) == 0) {
+        return true;
+    }
+    Class * fromClass = lookupClass(table, from->className);
+    while (fromClass != NULL && fromClass->parentName != NULL) {
+        if (strcmp(fromClass->parentName, to->className) == 0) {
+            return true;
+        }
+        fromClass = lookupClass(table, fromClass->parentName);
+    }
+    return false;
 }
 
 Type * typeError() {
