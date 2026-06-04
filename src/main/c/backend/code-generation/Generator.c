@@ -5,6 +5,7 @@
 const char _indentationCharacter = ' ';
 const char _indentationSize = 4;
 static Logger * _logger = NULL;
+static Program * _currentProgram = NULL;
 
 /** Shutdown module's internal state. */
 void _shutdownGeneratorModule() {
@@ -36,6 +37,7 @@ static void _generateParams(Parameter * params, const char * className);
 static void _generateMethod(Class * classNode, Method * method);
 static void _generateConstructor(Class * classNode, Method * method);
 static void _generateClassMethods(Class * classNode);
+static void _generateArgumentList(const char * name, ArgumentList * args);
 static void _generateExpression(Expression * expr);
 static void _generateStatement(Statement * stmt, unsigned int indent);
 static void _generateStatementList(StatementList * list, unsigned int indent);
@@ -276,7 +278,9 @@ static void _generateForwardDeclarations(Program * program) {
 }
 
 static char * _manglingTypeName(Type * type) {
-	if (type == NULL) return strdup("void");
+	if (type == NULL) {
+		return strdup("void");
+	}
 	switch (type->kind) {
 		case TYPEKIND_INT:    return strdup("int");
 		case TYPEKIND_BOOL:   return strdup("char");
@@ -294,9 +298,9 @@ static char * _manglingTypeName(Type * type) {
 
 static char * _generateMangling(Parameter * params) {
 	char * result = strdup("");
-	if (params == NULL){
+	if (params == NULL) {
 		return result;
-	} 
+	}
 	for (Parameter * p = params; p != NULL; p = p->next) {
 		char * typeName = _manglingTypeName(p->type);
 		char * sep = (p == params) ? "__" : "_";
@@ -328,8 +332,202 @@ static void _generateParams(Parameter * params, const char * className) {
 	_output(0, ")");
 }
 
+static void _generateArgumentList(const char * name, ArgumentList * args) {
+	_output(0, "%s(", name);
+	bool first = true;
+	for (ArgumentList * a = args; a != NULL; a = a->next) {
+		if (!first) {
+			_output(0, ", ");
+		}
+		_generateExpression(a->expression);
+		first = false;
+	}
+	_output(0, ")");
+}
+
 static void _generateExpression(Expression * expr) {
-	logDebugging(_logger, "TODO: _generateExpression");
+	if (expr == NULL) {
+		return;
+	}
+	switch (expr->kind) {
+		case EXPRESSION_INTEGER:
+			_output(0, "%d", expr->integerValue);
+			break;
+		case EXPRESSION_FLOAT:
+			_output(0, "%g", expr->floatValue);
+			break;
+		case EXPRESSION_STRING:
+			_output(0, "\"%s\"", expr->stringValue);
+			break;
+		case EXPRESSION_CHAR:
+			_output(0, "'%c'", expr->charValue);
+			break;
+		case EXPRESSION_BOOLEAN:
+			_output(0, "%d", expr->booleanValue ? 1 : 0);
+			break;
+		case EXPRESSION_IDENTIFIER:
+			_output(0, "%s", expr->identifier);
+			break;
+		case EXPRESSION_THIS:
+			_output(0, "self");
+			break;
+		case EXPRESSION_BINARY: {
+			const char * op;
+			switch (expr->binary.operator) {
+				case BINARY_OPERATOR_ADD:
+					op = "+";
+					break;
+				case BINARY_OPERATOR_SUB:
+					op = "-";
+					break;
+				case BINARY_OPERATOR_MUL:
+					op = "*";
+					break;
+				case BINARY_OPERATOR_DIV:
+					op = "/";
+					break;
+				case BINARY_OPERATOR_MOD:
+					op = "%";
+					break;
+				case BINARY_OPERATOR_EQUAL:
+					op = "==";
+					break;
+				case BINARY_OPERATOR_NOT_EQUAL:
+					op = "!=";
+					break;
+				case BINARY_OPERATOR_LESS:
+					op = "<";
+					break;
+				case BINARY_OPERATOR_GREATER:
+					op = ">";
+					break;
+				case BINARY_OPERATOR_LESS_EQUAL:
+					op = "<=";
+					break;
+				case BINARY_OPERATOR_GREATER_EQUAL:
+					op = ">=";
+					break;
+				case BINARY_OPERATOR_AND:
+					op = "&&";
+					break;
+				case BINARY_OPERATOR_OR:
+					op = "||";
+					break;
+				case BINARY_OPERATOR_ASSIGN:
+					op = "=";
+					break;
+				case BINARY_OPERATOR_PLUS_ASSIGN:
+					op = "+=";
+					break;
+				case BINARY_OPERATOR_MINUS_ASSIGN:
+					op = "-=";
+					break;
+				case BINARY_OPERATOR_MUL_ASSIGN:
+					op = "*=";
+					break;
+				case BINARY_OPERATOR_DIV_ASSIGN:
+					op = "/=";
+					break;
+				case BINARY_OPERATOR_MOD_ASSIGN:
+					op = "%=";
+					break;
+				default:
+					op = "?";
+					break;
+			}
+			_output(0, "(");
+			_generateExpression(expr->binary.left);
+			_output(0, " %s ", op);
+			_generateExpression(expr->binary.right);
+			_output(0, ")");
+			break;
+		}
+		case EXPRESSION_UNARY: {
+			switch (expr->unary.operator) {
+				case UNARY_OPERATOR_NOT:
+					_output(0, "!");
+					_generateExpression(expr->unary.operand);
+					break;
+				case UNARY_OPERATOR_NEGATE:
+					_output(0, "-");
+					_generateExpression(expr->unary.operand);
+					break;
+				case UNARY_OPERATOR_PRE_INCREMENT:
+					_output(0, "++");
+					_generateExpression(expr->unary.operand);
+					break;
+				case UNARY_OPERATOR_PRE_DECREMENT:
+					_output(0, "--");
+					_generateExpression(expr->unary.operand);
+					break;
+				case UNARY_OPERATOR_POST_INCREMENT:
+					_generateExpression(expr->unary.operand);
+					_output(0, "++");
+					break;
+				case UNARY_OPERATOR_POST_DECREMENT:
+					_generateExpression(expr->unary.operand);
+					_output(0, "--");
+					break;
+				case UNARY_OPERATOR_DEREFERENCE:
+					_output(0, "*");
+					_generateExpression(expr->unary.operand);
+					break;
+				case UNARY_OPERATOR_ADDRESS_OF:
+					_output(0, "&");
+					_generateExpression(expr->unary.operand);
+					break;
+				default:
+					logError(_logger, "Unknown unary operator: %d.", expr->unary.operator);
+					break;
+			}
+			break;
+		}
+		case EXPRESSION_NEW: {
+			Class * targetClass = NULL;
+			for (Class * c = _currentProgram->classes; c != NULL && targetClass == NULL; c = c->next) {
+				if (strcmp(c->name, expr->newExpression.className) == 0) {
+					targetClass = c;
+				}
+			}
+			if (targetClass == NULL) {
+				logError(_logger, "new expression references undeclared class '%s'.", expr->newExpression.className);
+				break;
+			}
+			Parameter * ctorParams = NULL;
+			for (Method * m = targetClass->methods; m != NULL && ctorParams == NULL; m = m->next) {
+				if (m->isConstructor) {
+					ctorParams = m->parameters;
+				}
+			}
+			char * mangling = _generateMangling(ctorParams);
+			char * ctorName = concatenate(3, expr->newExpression.className, "__new", mangling);
+			free(mangling);
+			_generateArgumentList(ctorName, expr->newExpression.arguments);
+			free(ctorName);
+			break;
+		}
+		case EXPRESSION_CALL:
+			if (expr->call.callee->kind == EXPRESSION_IDENTIFIER) {
+				_generateArgumentList(expr->call.callee->identifier, expr->call.arguments);
+			} else {
+				_output(0, "/* TODO: method dispatch needs type info, will be completed after semantics */");
+			}
+			break;
+		case EXPRESSION_FIELD_ACCESS:
+		case EXPRESSION_ARROW_ACCESS:
+			_generateExpression(expr->fieldAccess.object);
+			_output(0, "->%s", expr->fieldAccess.field);
+			break;
+		case EXPRESSION_INDEX:
+			_generateExpression(expr->indexAccess.array);
+			_output(0, "[");
+			_generateExpression(expr->indexAccess.index);
+			_output(0, "]");
+			break;
+		default:
+			logError(_logger, "Unknown expression kind: %d.", expr->kind);
+			break;
+	}
 }
 
 static void _generateBlockStatement(Statement * stmt, unsigned int indent) {
@@ -383,7 +581,9 @@ static void _generateWhileStatement(Statement * stmt, unsigned int indent) {
 }
 
 static void _generateForInitializer(Statement * stmt) {
-	if (stmt == NULL) return;
+	if (stmt == NULL) {
+		return;
+	}
 	if (stmt->kind == STATEMENT_VARIABLE_DECLARATION) {
 		char * typeName = _generateTypeName(stmt->variableDeclaration.type);
 		_output(0, "%s %s", typeName, stmt->variableDeclaration.name);
@@ -410,7 +610,9 @@ static void _generateForStatement(Statement * stmt, unsigned int indent) {
 }
 
 static void _generateStatement(Statement * stmt, unsigned int indent) {
-	if (stmt == NULL) return;
+	if (stmt == NULL) {
+		return;
+	}
 	switch (stmt->kind) {
 		case STATEMENT_BLOCK:              return _generateBlockStatement(stmt, indent);
 		case STATEMENT_RETURN:             return _generateReturnStatement(stmt, indent);
@@ -420,7 +622,7 @@ static void _generateStatement(Statement * stmt, unsigned int indent) {
 		case STATEMENT_WHILE:              return _generateWhileStatement(stmt, indent);
 		case STATEMENT_FOR:                return _generateForStatement(stmt, indent);
 		default:
-			logDebugging(_logger, "TODO: statement kind %d", stmt->kind);
+			logError(_logger, "Unknown statement kind: %d.", stmt->kind);
 	}
 }
 
@@ -508,6 +710,7 @@ void executeGenerator(CompilerState * compilerState) {
 	if (program == NULL) {
 		return;
 	}
+	_currentProgram = program;
 	logDebugging(_logger, "Generating C output...");
 	_generatePrologue();
 	_generateForwardDeclarations(program);
