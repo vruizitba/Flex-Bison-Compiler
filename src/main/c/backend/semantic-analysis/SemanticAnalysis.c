@@ -47,11 +47,109 @@ static CompilationStatus _collectDeclarations(SymbolTable * table, Program * pro
     return status;
 }
 
+static CompilationStatus _checkStatement(SymbolTable * table, Statement * statement);
+
+static CompilationStatus _checkStatements(SymbolTable * table, StatementList * list) {
+    CompilationStatus status = SUCCEEDED;
+    for (StatementList * node = list; node != NULL; node = node->next) {
+        if (_checkStatement(table, node->statement) != SUCCEEDED) {
+            status = FAILED;
+        }
+    }
+    return status;
+}
+
+static CompilationStatus _checkStatement(SymbolTable * table, Statement * statement) {
+    if (statement == NULL) {
+        return SUCCEEDED;
+    }
+    switch (statement->kind) {
+        case STATEMENT_VARIABLE_DECLARATION: {
+            Type * declaredType = statement->variableDeclaration.type;
+            if (statement->variableDeclaration.initializer != NULL) {
+                Type * initType = typeOf(table, statement->variableDeclaration.initializer);
+                if (initType != NULL && !isAssignable(table, initType, declaredType)) {
+                    logError(_logger, "Type mismatch in declaration of '%s'.", statement->variableDeclaration.name);
+                    return FAILED;
+                }
+            }
+            if (!declareVariable(table, statement->variableDeclaration.name, declaredType)) {
+                logError(_logger, "Variable '%s' already declared in an active scope.", statement->variableDeclaration.name);
+                return FAILED;
+            }
+            return SUCCEEDED;
+        }
+        case STATEMENT_BLOCK: {
+            pushScope(table);
+            CompilationStatus status = _checkStatements(table, statement->block);
+            popScope(table);
+            return status;
+        }
+        case STATEMENT_IF: {
+            CompilationStatus status = SUCCEEDED;
+            if (_checkStatement(table, statement->ifStatement.thenBranch) != SUCCEEDED) {
+                status = FAILED;
+            }
+            if (statement->ifStatement.elseBranch != NULL) {
+                if (_checkStatement(table, statement->ifStatement.elseBranch) != SUCCEEDED) {
+                    status = FAILED;
+                }
+            }
+            return status;
+        }
+        case STATEMENT_WHILE:
+            return _checkStatement(table, statement->whileStatement.body);
+        case STATEMENT_FOR: {
+            pushScope(table);
+            CompilationStatus status = SUCCEEDED;
+            if (statement->forStatement.initializer != NULL) {
+                if (_checkStatement(table, statement->forStatement.initializer) != SUCCEEDED) {
+                    status = FAILED;
+                }
+            }
+            if (_checkStatement(table, statement->forStatement.body) != SUCCEEDED) {
+                status = FAILED;
+            }
+            popScope(table);
+            return status;
+        }
+        default:
+            return SUCCEEDED;
+    }
+}
+
+static CompilationStatus _processBodies(SymbolTable * table, Program * program) {
+    CompilationStatus status = SUCCEEDED;
+
+    pushScope(table);
+    if (_checkStatements(table, program->mainBody) != SUCCEEDED) {
+        status = FAILED;
+    }
+    popScope(table);
+
+    for (Function * function = program->functions; function != NULL; function = function->next) {
+        pushScope(table);
+        if (_checkStatements(table, function->body) != SUCCEEDED) {
+            status = FAILED;
+        }
+        popScope(table);
+    }
+
+    return status;
+}
+
 CompilationStatus executeSemanticAnalysis(CompilerState * compilerState) {
     logDebugging(_logger, "Beginning semantic analysis...");
     compilerState->symbolTable = createSymbolTable();
 
-    CompilationStatus status = _collectDeclarations(compilerState->symbolTable, compilerState->abstractSyntaxtTree);
+    Program * program = compilerState->abstractSyntaxtTree;
+    CompilationStatus status = _collectDeclarations(compilerState->symbolTable, program);
+
+    if (status == SUCCEEDED) {
+        if (_processBodies(compilerState->symbolTable, program) != SUCCEEDED) {
+            status = FAILED;
+        }
+    }
 
     if (status != SUCCEEDED) {
         logError(_logger, "Semantic analysis failed.");

@@ -7,18 +7,18 @@
 #define INITIAL_CAPACITY 8
 
 /* Primitive type sentinels — static, never freed. */
-static Type _typeErrorSentinel   = { .kind = TYPEKIND_ERROR  };
-static Type _typeIntSentinel     = { .kind = TYPEKIND_INT    };
-static Type _typeFloatSentinel   = { .kind = TYPEKIND_FLOAT  };
-static Type _typeDoubleSentinel  = { .kind = TYPEKIND_DOUBLE };
-static Type _typeCharSentinel    = { .kind = TYPEKIND_CHAR   };
-static Type _typeBoolSentinel    = { .kind = TYPEKIND_BOOL   };
-static Type _typeStringSentinel  = { .kind = TYPEKIND_STRING };
-static Type _typeVoidSentinel    = { .kind = TYPEKIND_VOID   };
+static Type _typeErrorSentinel  = { .kind = TYPEKIND_ERROR  };
+static Type _typeIntSentinel    = { .kind = TYPEKIND_INT    };
+static Type _typeFloatSentinel  = { .kind = TYPEKIND_FLOAT  };
+static Type _typeDoubleSentinel = { .kind = TYPEKIND_DOUBLE };
+static Type _typeCharSentinel   = { .kind = TYPEKIND_CHAR   };
+static Type _typeBoolSentinel   = { .kind = TYPEKIND_BOOL   };
+static Type _typeStringSentinel = { .kind = TYPEKIND_STRING };
+static Type _typeVoidSentinel   = { .kind = TYPEKIND_VOID   };
 
 typedef struct {
     const char * name;
-    Type * type;
+    Type * type;    
 } VarEntry;
 
 typedef struct {
@@ -29,6 +29,7 @@ typedef struct {
 
 struct SymbolTable {
     Class ** classes;
+    Type  ** classTypes;
     int classCount;
     int classCapacity;
 
@@ -57,9 +58,16 @@ SymbolTable * createSymbolTable() {
         free(table);
         return NULL;
     }
+    table->classTypes = malloc(table->classCapacity * sizeof(Type *));
+    if (table->classTypes == NULL) {
+        free(table->classes);
+        free(table);
+        return NULL;
+    }
     table->functionCapacity = INITIAL_CAPACITY;
     table->functions = malloc(table->functionCapacity * sizeof(Function *));
     if (table->functions == NULL) {
+        free(table->classTypes);
         free(table->classes);
         free(table);
         return NULL;
@@ -68,6 +76,7 @@ SymbolTable * createSymbolTable() {
     table->scopes = malloc(table->scopeCapacity * sizeof(Scope));
     if (table->scopes == NULL) {
         free(table->functions);
+        free(table->classTypes);
         free(table->classes);
         free(table);
         return NULL;
@@ -76,6 +85,10 @@ SymbolTable * createSymbolTable() {
 }
 
 void destroySymbolTable(SymbolTable * table) {
+    for (int i = 0; i < table->classCount; i++) {
+        free(table->classTypes[i]);
+    }
+    free(table->classTypes);
     for (int i = 0; i < table->scopeCount; i++) {
         free(table->scopes[i].varEntries);
     }
@@ -92,14 +105,26 @@ bool registerClass(SymbolTable * table, Class * classNode) {
     }
     if (table->classCount == table->classCapacity) {
         int newCapacity = table->classCapacity * 2;
-        Class ** resized = realloc(table->classes, newCapacity * sizeof(Class *));
-        if (resized == NULL) {
+        Class ** resizedClasses = realloc(table->classes, newCapacity * sizeof(Class *));
+        if (resizedClasses == NULL) {
             return false;
         }
-        table->classes = resized;
+        table->classes = resizedClasses;
+        Type ** resizedTypes = realloc(table->classTypes, newCapacity * sizeof(Type *));
+        if (resizedTypes == NULL) {
+            return false;
+        }
+        table->classTypes = resizedTypes;
         table->classCapacity = newCapacity;
     }
-    table->classes[table->classCount++] = classNode;
+    Type * classType = calloc(1, sizeof(Type));
+    if (classType == NULL) {
+        return false;
+    }
+    classType->kind = TYPEKIND_CLASS;
+    classType->className = classNode->name;
+    table->classes[table->classCount] = classNode;
+    table->classTypes[table->classCount++] = classType;
     return true;
 }
 
@@ -125,6 +150,15 @@ Class * lookupClass(SymbolTable * table, const char * name) {
     for (int i = 0; i < table->classCount; i++) {
         if (strcmp(table->classes[i]->name, name) == 0) {
             return table->classes[i];
+        }
+    }
+    return NULL;
+}
+
+static Type * lookupClassType(SymbolTable * table, const char * name) {
+    for (int i = 0; i < table->classCount; i++) {
+        if (strcmp(table->classes[i]->name, name) == 0) {
+            return table->classTypes[i];
         }
     }
     return NULL;
@@ -202,10 +236,14 @@ void pushScope(SymbolTable * table) {
         table->scopes = resized;
         table->scopeCapacity = newCapacity;
     }
-    Scope * scope = &table->scopes[table->scopeCount++];
+    Scope * scope = &table->scopes[table->scopeCount];
     scope->varCapacity = INITIAL_CAPACITY;
     scope->varCount = 0;
     scope->varEntries = malloc(scope->varCapacity * sizeof(VarEntry));
+    if (scope->varEntries == NULL) {
+        return;
+    }
+    table->scopeCount++;
 }
 
 void popScope(SymbolTable * table) {
@@ -255,44 +293,79 @@ Type * lookupVariable(SymbolTable * table, const char * name) {
 }
 
 /* ---- Type checker ---- */
+typedef enum {
+    NUMERIC_RANK_NONE   = -1,
+    NUMERIC_RANK_CHAR   = 0,
+    NUMERIC_RANK_INT    = 1,
+    NUMERIC_RANK_FLOAT  = 2,
+    NUMERIC_RANK_DOUBLE = 3
+} NumericRank;
+
+static NumericRank _numericRank(TypeKind kind) {
+    switch (kind) {
+        case TYPEKIND_CHAR:
+            return NUMERIC_RANK_CHAR;
+        case TYPEKIND_INT:
+            return NUMERIC_RANK_INT;
+        case TYPEKIND_FLOAT:
+            return NUMERIC_RANK_FLOAT;
+        case TYPEKIND_DOUBLE:
+            return NUMERIC_RANK_DOUBLE;
+        default:
+            return NUMERIC_RANK_NONE;
+    }
+}
+
+static Type * _widenNumeric(Type * left, Type * right) {
+    NumericRank leftRank  = _numericRank(left->kind);
+    NumericRank rightRank = _numericRank(right->kind);
+    if (leftRank == NUMERIC_RANK_NONE || rightRank == NUMERIC_RANK_NONE) {
+        return &_typeErrorSentinel;
+    }
+    switch (leftRank >= rightRank ? leftRank : rightRank) {
+        case NUMERIC_RANK_CHAR:
+            return &_typeCharSentinel;
+        case NUMERIC_RANK_INT:
+            return &_typeIntSentinel;
+        case NUMERIC_RANK_FLOAT:
+            return &_typeFloatSentinel;
+        case NUMERIC_RANK_DOUBLE:
+            return &_typeDoubleSentinel;
+        default:
+            return &_typeErrorSentinel;
+    }
+}
+
 Type * typeOf(SymbolTable * table, Expression * expr) {
     if (expr == NULL) {
         return &_typeErrorSentinel;
     }
     switch (expr->kind) {
-        case EXPRESSION_INTEGER:    return &_typeIntSentinel;
-        case EXPRESSION_FLOAT:      return &_typeFloatSentinel;
-        case EXPRESSION_STRING:     return &_typeStringSentinel;
-        case EXPRESSION_CHAR:       return &_typeCharSentinel;
-        case EXPRESSION_BOOLEAN:    return &_typeBoolSentinel;
+        case EXPRESSION_INTEGER:
+            return &_typeIntSentinel;
+        case EXPRESSION_FLOAT:
+            return &_typeFloatSentinel;
+        case EXPRESSION_STRING:
+            return &_typeStringSentinel;
+        case EXPRESSION_CHAR:
+            return &_typeCharSentinel;
+        case EXPRESSION_BOOLEAN:
+            return &_typeBoolSentinel;
         case EXPRESSION_THIS: {
             const char * className = getCurrentClass(table);
             if (className == NULL) {
                 return &_typeErrorSentinel;
             }
-            Type * type = calloc(1, sizeof(Type));
-            if (type == NULL) {
-                return &_typeErrorSentinel;
-            }
-            type->kind = TYPEKIND_CLASS;
-            type->className = (char *)className;
-            return type;
+            Type * type = lookupClassType(table, className);
+            return type != NULL ? type : &_typeErrorSentinel;
         }
         case EXPRESSION_IDENTIFIER: {
             Type * type = lookupVariable(table, expr->identifier);
             return type != NULL ? type : &_typeErrorSentinel;
         }
         case EXPRESSION_NEW: {
-            if (lookupClass(table, expr->newExpression.className) == NULL) {
-                return &_typeErrorSentinel;
-            }
-            Type * type = calloc(1, sizeof(Type));
-            if (type == NULL) {
-                return &_typeErrorSentinel;
-            }
-            type->kind = TYPEKIND_CLASS;
-            type->className = expr->newExpression.className;
-            return type;
+            Type * type = lookupClassType(table, expr->newExpression.className);
+            return type != NULL ? type : &_typeErrorSentinel;
         }
         case EXPRESSION_BINARY: {
             Type * left = typeOf(table, expr->binary.left);
@@ -300,12 +373,38 @@ Type * typeOf(SymbolTable * table, Expression * expr) {
             if (isTypeError(left) || isTypeError(right)) {
                 return &_typeErrorSentinel;
             }
-            return left;
+            switch (expr->binary.operator) {
+                case BINARY_OPERATOR_ADD:
+                case BINARY_OPERATOR_SUB:
+                case BINARY_OPERATOR_MUL:
+                case BINARY_OPERATOR_DIV:
+                case BINARY_OPERATOR_MOD:
+                    return _widenNumeric(left, right);
+                case BINARY_OPERATOR_EQUAL:
+                case BINARY_OPERATOR_NOT_EQUAL:
+                case BINARY_OPERATOR_LESS:
+                case BINARY_OPERATOR_GREATER:
+                case BINARY_OPERATOR_LESS_EQUAL:
+                case BINARY_OPERATOR_GREATER_EQUAL:
+                case BINARY_OPERATOR_AND:
+                case BINARY_OPERATOR_OR:
+                    return &_typeBoolSentinel;
+                case BINARY_OPERATOR_ASSIGN:
+                case BINARY_OPERATOR_PLUS_ASSIGN:
+                case BINARY_OPERATOR_MINUS_ASSIGN:
+                case BINARY_OPERATOR_MUL_ASSIGN:
+                case BINARY_OPERATOR_DIV_ASSIGN:
+                case BINARY_OPERATOR_MOD_ASSIGN:
+                    return left;
+                default:
+                    return &_typeErrorSentinel;
+            }
         }
         case EXPRESSION_UNARY:
             return typeOf(table, expr->unary.operand);
         default:
-            return &_typeErrorSentinel;
+            /* Expression kind not yet typed. Return NULL (unknown, not a known error). */
+            return NULL;
     }
 }
 
@@ -315,6 +414,11 @@ bool isAssignable(SymbolTable * table, Type * from, Type * to) {
     }
     if (isTypeError(from) || isTypeError(to)) {
         return false;
+    }
+    NumericRank fromRank = _numericRank(from->kind);
+    NumericRank toRank   = _numericRank(to->kind);
+    if (fromRank != NUMERIC_RANK_NONE && toRank != NUMERIC_RANK_NONE) {
+        return fromRank <= toRank;
     }
     if (from->kind != to->kind) {
         return false;
