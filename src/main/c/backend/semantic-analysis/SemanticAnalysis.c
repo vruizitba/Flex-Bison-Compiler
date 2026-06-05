@@ -113,6 +113,14 @@ static CompilationStatus _checkStatement(SymbolTable * table, Statement * statem
             popScope(table);
             return status;
         }
+        case STATEMENT_EXPRESSION: {
+            Type * t = typeOf(table, statement->expressionStatement);
+            if (isTypeError(t)) {
+                logError(_logger, "Invalid expression statement.");
+                return FAILED;
+            }
+            return SUCCEEDED;
+        }
         default:
             return SUCCEEDED;
     }
@@ -129,10 +137,28 @@ static CompilationStatus _processBodies(SymbolTable * table, Program * program) 
 
     for (Function * function = program->functions; function != NULL; function = function->next) {
         pushScope(table);
+        for (Parameter * p = function->parameters; p != NULL; p = p->next) {
+            declareVariable(table, p->name, p->type);
+        }
         if (_checkStatements(table, function->body) != SUCCEEDED) {
             status = FAILED;
         }
         popScope(table);
+    }
+
+    for (Class * class = program->classes; class != NULL; class = class->next) {
+        setCurrentClass(table, class->name);
+        for (Method * method = class->methods; method != NULL; method = method->next) {
+            pushScope(table);
+            for (Parameter * p = method->parameters; p != NULL; p = p->next) {
+                declareVariable(table, p->name, p->type);
+            }
+            if (_checkStatements(table, method->body) != SUCCEEDED) {
+                status = FAILED;
+            }
+            popScope(table);
+        }
+        setCurrentClass(table, NULL);
     }
 
     return status;
