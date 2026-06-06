@@ -31,7 +31,7 @@ Class * lookupClass(SymbolTable * table, const char * name);
 Function * lookupFunction(SymbolTable * table, const char * name);
 /** Returns a heap-allocated FieldInfo (caller frees), or NULL if not found. */
 FieldInfo * lookupField(SymbolTable * table, const char * className, const char * fieldName);
-/** Matches by name and param count (argCount < 0 = any arity). Returns a heap-allocated MethodInfo (caller frees), or NULL if not found. */
+/** Matches by name, param count (argCount < 0 = any arity), and arg types when argTypes != NULL. Returns a heap-allocated MethodInfo (caller frees), or NULL if no overload matches. */
 MethodInfo * lookupMethod(SymbolTable * table, const char * className, const char * methodName, Type ** argTypes, int argCount);
 
 /* ---- Scope stack ---- */
