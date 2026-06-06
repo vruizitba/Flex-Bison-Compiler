@@ -454,14 +454,15 @@ Type * typeOf(SymbolTable * table, Expression * expr) {
         }
         case EXPRESSION_CALL: {
             Expression * callee = expr->call.callee;
+            int argCount = 0;
+            for (ArgumentList * a = expr->call.arguments; a != NULL; a = a->next) {
+                typeOf(table, a->expression);
+                argCount++;
+            }
             if (callee->kind == EXPRESSION_FIELD_ACCESS || callee->kind == EXPRESSION_ARROW_ACCESS) {
                 Type * objectType = typeOf(table, callee->fieldAccess.object);
                 if (objectType == NULL || isTypeError(objectType) || objectType->kind != TYPEKIND_CLASS) {
                     return &_typeErrorSentinel;
-                }
-                int argCount = 0;
-                for (ArgumentList * a = expr->call.arguments; a != NULL; a = a->next) {
-                    argCount++;
                 }
                 MethodInfo * info = lookupMethod(table, objectType->className, callee->fieldAccess.field, NULL, argCount);
                 if (info == NULL) {
@@ -470,10 +471,14 @@ Type * typeOf(SymbolTable * table, Expression * expr) {
                 Visibility vis = info->method->visibility;
                 Type * returnType = info->method->returnType;
                 const char * ownerName = info->ownerClassName;
-                free(info);
                 if (!_isAccessible(table, vis, ownerName, getCurrentClass(table))) {
+                    free(info);
                     return &_typeErrorSentinel;
                 }
+                /* Annotate the call node for the code generator . */
+                expr->resolvedMethod = info->method;
+                expr->resolvedOwnerClass = info->ownerClassName;
+                free(info);
                 return returnType != NULL ? returnType : &_typeVoidSentinel;
             }
             if (callee->kind == EXPRESSION_IDENTIFIER) {

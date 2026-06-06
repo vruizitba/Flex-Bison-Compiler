@@ -145,6 +145,9 @@ void destroyType(Type * type);
 
 struct Expression {
     ExpressionKind kind;
+    /* Method-call annotations set by semantic analysis. Borrowed: not freed by destroyExpression. */
+    Method * resolvedMethod;
+    char * resolvedOwnerClass;
     union {
         int integerValue;
         double floatValue;

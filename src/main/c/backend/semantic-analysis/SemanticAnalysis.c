@@ -87,6 +87,7 @@ static CompilationStatus _checkStatement(SymbolTable * table, Statement * statem
         }
         case STATEMENT_IF: {
             CompilationStatus status = SUCCEEDED;
+            typeOf(table, statement->ifStatement.condition);
             if (_checkStatement(table, statement->ifStatement.thenBranch) != SUCCEEDED) {
                 status = FAILED;
             }
@@ -98,6 +99,7 @@ static CompilationStatus _checkStatement(SymbolTable * table, Statement * statem
             return status;
         }
         case STATEMENT_WHILE:
+            typeOf(table, statement->whileStatement.condition);
             return _checkStatement(table, statement->whileStatement.body);
         case STATEMENT_FOR: {
             pushScope(table);
@@ -107,12 +109,17 @@ static CompilationStatus _checkStatement(SymbolTable * table, Statement * statem
                     status = FAILED;
                 }
             }
+            typeOf(table, statement->forStatement.condition);
+            typeOf(table, statement->forStatement.step);
             if (_checkStatement(table, statement->forStatement.body) != SUCCEEDED) {
                 status = FAILED;
             }
             popScope(table);
             return status;
         }
+        case STATEMENT_RETURN:
+            typeOf(table, statement->returnStatement.value);
+            return SUCCEEDED;
         case STATEMENT_EXPRESSION: {
             Type * t = typeOf(table, statement->expressionStatement);
             if (isTypeError(t)) {

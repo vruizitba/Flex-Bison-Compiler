@@ -506,13 +506,35 @@ static void _generateExpression(Expression * expr) {
 			free(ctorName);
 			break;
 		}
-		case EXPRESSION_CALL:
-			if (expr->call.callee->kind == EXPRESSION_IDENTIFIER) {
-				_generateArgumentList(expr->call.callee->identifier, expr->call.arguments);
+		case EXPRESSION_CALL: {
+			Expression * callee = expr->call.callee;
+			if (callee->kind == EXPRESSION_IDENTIFIER) {
+				_generateArgumentList(callee->identifier, expr->call.arguments);
+			} else if ((callee->kind == EXPRESSION_FIELD_ACCESS || callee->kind == EXPRESSION_ARROW_ACCESS)
+					&& expr->resolvedMethod != NULL) {
+				Method * method = expr->resolvedMethod;
+				char * mangling = _generateMangling(method->parameters);
+				_output(0, "%s__%s%s(", expr->resolvedOwnerClass, callee->fieldAccess.field, mangling);
+				free(mangling);
+				bool first = true;
+				if (!method->isStatic) {
+					_output(0, "(%s *) ", expr->resolvedOwnerClass);
+					_generateExpression(callee->fieldAccess.object);
+					first = false;
+				}
+				for (ArgumentList * a = expr->call.arguments; a != NULL; a = a->next) {
+					if (!first) {
+						_output(0, ", ");
+					}
+					_generateExpression(a->expression);
+					first = false;
+				}
+				_output(0, ")");
 			} else {
-				_output(0, "/* TODO: method dispatch needs type info, will be completed after semantics */");
+				logError(_logger, "Unresolved method call in code generation.");
 			}
 			break;
+		}
 		case EXPRESSION_FIELD_ACCESS:
 		case EXPRESSION_ARROW_ACCESS:
 			_generateExpression(expr->fieldAccess.object);
