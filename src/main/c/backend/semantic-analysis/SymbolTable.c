@@ -99,9 +99,48 @@ void destroySymbolTable(SymbolTable * table) {
 }
 
 /* ---- Registration ---- */
+static bool _typesEqual(Type * a, Type * b) {
+    if (a == NULL && b == NULL) {
+        return true;
+    }
+    if (a == NULL || b == NULL) {
+        return false;
+    }
+    if (a->kind != b->kind) {
+        return false;
+    }
+    if (a->kind == TYPEKIND_CLASS) {
+        return strcmp(a->className, b->className) == 0;
+    }
+    return true;
+}
+
+static bool _signaturesConflict(Method * a, Method * b) {
+    if (strcmp(a->name, b->name) != 0) {
+        return false;
+    }
+    Parameter * pa = a->parameters;
+    Parameter * pb = b->parameters;
+    while (pa != NULL && pb != NULL) {
+        if (!_typesEqual(pa->type, pb->type)) {
+            return false;
+        }
+        pa = pa->next;
+        pb = pb->next;
+    }
+    return pa == NULL && pb == NULL;
+}
+
 bool registerClass(SymbolTable * table, Class * classNode) {
     if (lookupClass(table, classNode->name) != NULL) {
         return false;
+    }
+    for (Method * m1 = classNode->methods; m1 != NULL; m1 = m1->next) {
+        for (Method * m2 = m1->next; m2 != NULL; m2 = m2->next) {
+            if (_signaturesConflict(m1, m2)) {
+                return false;
+            }
+        }
     }
     if (table->classCount == table->classCapacity) {
         int newCapacity = table->classCapacity * 2;
@@ -200,25 +239,37 @@ static int _paramCount(Parameter * params) {
     return count;
 }
 
-/* argCount < 0 matches any arity; type-based overload resolution is not yet implemented. */
+static bool _argsMatchParams(SymbolTable * table, Type ** argTypes, int argCount, Parameter * params) {
+    Parameter * p = params;
+    for (int i = 0; i < argCount && p != NULL; i++, p = p->next) {
+        if (!isAssignable(table, argTypes[i], p->type)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* argCount < 0 matches any arity; argTypes NULL skips type-based overload resolution. */
 MethodInfo * lookupMethod(SymbolTable * table, const char * className, const char * methodName, Type ** argTypes, int argCount) {
-    (void)argTypes;
     Class * class = lookupClass(table, className);
     while (class != NULL) {
         for (Method * method = class->methods; method != NULL; method = method->next) {
-            if (strcmp(method->name, methodName) != 0) {
-                continue;
+            bool skip = strcmp(method->name, methodName) != 0;
+            if (!skip && argCount >= 0) {
+                skip = _paramCount(method->parameters) != argCount;
             }
-            if (argCount >= 0 && _paramCount(method->parameters) != argCount) {
-                continue;
+            if (!skip && argTypes != NULL && argCount > 0) {
+                skip = !_argsMatchParams(table, argTypes, argCount, method->parameters);
             }
-            MethodInfo * info = malloc(sizeof(MethodInfo));
-            if (info == NULL) {
-                return NULL;
+            if (!skip) {
+                MethodInfo * info = malloc(sizeof(MethodInfo));
+                if (info == NULL) {
+                    return NULL;
+                }
+                info->method = method;
+                info->ownerClassName = class->name;
+                return info;
             }
-            info->method = method;
-            info->ownerClassName = class->name;
-            return info;
         }
         class = class->parentName != NULL ? lookupClass(table, class->parentName) : NULL;
     }
@@ -354,13 +405,134 @@ static bool _isSubclassOrEqual(SymbolTable * table, const char * child, const ch
 }
 
 /* public: always; private: only the owner; protected: the owner or a subclass. */
-static bool _isAccessible(SymbolTable * table, Visibility vis, const char * ownerName, const char * ctx) {
-    switch (vis) {
-        case VISIBILITY_PUBLIC:    return true;
-        case VISIBILITY_PRIVATE:   return ctx != NULL && strcmp(ctx, ownerName) == 0;
-        case VISIBILITY_PROTECTED: return _isSubclassOrEqual(table, ctx, ownerName);
+static bool _isAccessible(SymbolTable * table, Visibility visibility, const char * ownerName, const char * currentClass) {
+    switch (visibility) {
+        case VISIBILITY_PUBLIC:
+            return true;
+        case VISIBILITY_PRIVATE:
+            return currentClass != NULL && strcmp(currentClass, ownerName) == 0;
+        case VISIBILITY_PROTECTED:
+            return _isSubclassOrEqual(table, currentClass, ownerName);
     }
     return false;
+}
+
+static Type * _typeOfBinary(SymbolTable * table, Expression * expr) {
+    Type * left = typeOf(table, expr->binary.left);
+    Type * right = typeOf(table, expr->binary.right);
+    if (isTypeError(left) || isTypeError(right)) {
+        return &_typeErrorSentinel;
+    }
+    switch (expr->binary.operator) {
+        case BINARY_OPERATOR_ADD:
+        case BINARY_OPERATOR_SUB:
+        case BINARY_OPERATOR_MUL:
+        case BINARY_OPERATOR_DIV:
+        case BINARY_OPERATOR_MOD:
+            return _widenNumeric(left, right);
+        case BINARY_OPERATOR_EQUAL:
+        case BINARY_OPERATOR_NOT_EQUAL:
+        case BINARY_OPERATOR_LESS:
+        case BINARY_OPERATOR_GREATER:
+        case BINARY_OPERATOR_LESS_EQUAL:
+        case BINARY_OPERATOR_GREATER_EQUAL:
+        case BINARY_OPERATOR_AND:
+        case BINARY_OPERATOR_OR:
+            return &_typeBoolSentinel;
+        case BINARY_OPERATOR_ASSIGN:
+        case BINARY_OPERATOR_PLUS_ASSIGN:
+        case BINARY_OPERATOR_MINUS_ASSIGN:
+        case BINARY_OPERATOR_MUL_ASSIGN:
+        case BINARY_OPERATOR_DIV_ASSIGN:
+        case BINARY_OPERATOR_MOD_ASSIGN:
+            return left;
+        default:
+            return &_typeErrorSentinel;
+    }
+}
+
+static Type * _typeOfFieldAccess(SymbolTable * table, Expression * expr) {
+    Type * objectType = typeOf(table, expr->fieldAccess.object);
+    if (objectType == NULL || isTypeError(objectType) || objectType->kind != TYPEKIND_CLASS) {
+        return &_typeErrorSentinel;
+    }
+    FieldInfo * info = lookupField(table, objectType->className, expr->fieldAccess.field);
+    if (info == NULL) {
+        return &_typeErrorSentinel;
+    }
+    Visibility visibility = info->field->visibility;
+    Type * fieldType = info->field->type;
+    const char * ownerName = info->ownerClassName;
+    free(info);
+    if (!_isAccessible(table, visibility, ownerName, getCurrentClass(table))) {
+        return &_typeErrorSentinel;
+    }
+    return fieldType;
+}
+
+static Type * _typeOfCall(SymbolTable * table, Expression * expr) {
+    Expression * callee = expr->call.callee;
+
+    /* Collect argument types (shared by method and free-function paths). */
+    int argCount = 0;
+    for (ArgumentList * a = expr->call.arguments; a != NULL; a = a->next) {
+        argCount++;
+    }
+    Type ** argTypes = NULL;
+    if (argCount > 0) {
+        argTypes = malloc(argCount * sizeof(Type *));
+        if (argTypes == NULL) {
+            return &_typeErrorSentinel;
+        }
+        int i = 0;
+        for (ArgumentList * a = expr->call.arguments; a != NULL; a = a->next, i++) {
+            argTypes[i] = typeOf(table, a->expression);
+            if (isTypeError(argTypes[i])) {
+                free(argTypes);
+                return &_typeErrorSentinel;
+            }
+        }
+    }
+
+    if (callee->kind == EXPRESSION_FIELD_ACCESS || callee->kind == EXPRESSION_ARROW_ACCESS) {
+        Type * objectType = typeOf(table, callee->fieldAccess.object);
+        if (objectType == NULL || isTypeError(objectType) || objectType->kind != TYPEKIND_CLASS) {
+            free(argTypes);
+            return &_typeErrorSentinel;
+        }
+        MethodInfo * info = lookupMethod(table, objectType->className, callee->fieldAccess.field, argTypes, argCount);
+        free(argTypes);
+        if (info == NULL) {
+            return &_typeErrorSentinel;
+        }
+        Visibility visibility = info->method->visibility;
+        Type * returnType = info->method->returnType;
+        const char * ownerName = info->ownerClassName;
+        free(info);
+        if (!_isAccessible(table, visibility, ownerName, getCurrentClass(table))) {
+            return &_typeErrorSentinel;
+        }
+        return returnType != NULL ? returnType : &_typeVoidSentinel;
+    }
+    if (callee->kind == EXPRESSION_IDENTIFIER) {
+        Function * function = lookupFunction(table, callee->identifier);
+        if (function == NULL) {
+            free(argTypes);
+            return &_typeErrorSentinel;
+        }
+        if (_paramCount(function->parameters) != argCount) {
+            free(argTypes);
+            return &_typeErrorSentinel;
+        }
+        if (argTypes != NULL && !_argsMatchParams(table, argTypes, argCount, function->parameters)) {
+            free(argTypes);
+            return &_typeErrorSentinel;
+        }
+        free(argTypes);
+        return function->returnType != NULL ? function->returnType : &_typeVoidSentinel;
+    }
+    free(argTypes);
+    return NULL;
 }
 
 Type * typeOf(SymbolTable * table, Expression * expr) {
@@ -398,39 +570,8 @@ Type * typeOf(SymbolTable * table, Expression * expr) {
             Type * type = lookupClassType(table, expr->newExpression.className);
             return type != NULL ? type : &_typeErrorSentinel;
         }
-        case EXPRESSION_BINARY: {
-            Type * left = typeOf(table, expr->binary.left);
-            Type * right = typeOf(table, expr->binary.right);
-            if (isTypeError(left) || isTypeError(right)) {
-                return &_typeErrorSentinel;
-            }
-            switch (expr->binary.operator) {
-                case BINARY_OPERATOR_ADD:
-                case BINARY_OPERATOR_SUB:
-                case BINARY_OPERATOR_MUL:
-                case BINARY_OPERATOR_DIV:
-                case BINARY_OPERATOR_MOD:
-                    return _widenNumeric(left, right);
-                case BINARY_OPERATOR_EQUAL:
-                case BINARY_OPERATOR_NOT_EQUAL:
-                case BINARY_OPERATOR_LESS:
-                case BINARY_OPERATOR_GREATER:
-                case BINARY_OPERATOR_LESS_EQUAL:
-                case BINARY_OPERATOR_GREATER_EQUAL:
-                case BINARY_OPERATOR_AND:
-                case BINARY_OPERATOR_OR:
-                    return &_typeBoolSentinel;
-                case BINARY_OPERATOR_ASSIGN:
-                case BINARY_OPERATOR_PLUS_ASSIGN:
-                case BINARY_OPERATOR_MINUS_ASSIGN:
-                case BINARY_OPERATOR_MUL_ASSIGN:
-                case BINARY_OPERATOR_DIV_ASSIGN:
-                case BINARY_OPERATOR_MOD_ASSIGN:
-                    return left;
-                default:
-                    return &_typeErrorSentinel;
-            }
-        }
+        case EXPRESSION_BINARY:
+            return _typeOfBinary(table, expr);
         case EXPRESSION_UNARY:
             return typeOf(table, expr->unary.operand);
         case EXPRESSION_FIELD_ACCESS:

@@ -20,10 +20,13 @@ ModuleDestructor initializeSemanticAnalysisModule() {
 static CompilationStatus _collectDeclarations(SymbolTable * table, Program * program) {
     CompilationStatus status = SUCCEEDED;
 
-    /* Register all classes. */
+    /* Register all classes; registerClass also rejects duplicate method signatures. */
     for (Class * class = program->classes; class != NULL; class = class->next) {
-        if (!registerClass(table, class)) {
+        if (lookupClass(table, class->name) != NULL) {
             logError(_logger, "Duplicate class declaration: '%s'.", class->name);
+            status = FAILED;
+        } else if (!registerClass(table, class)) {
+            logError(_logger, "Duplicate method signature in class '%s'.", class->name);
             status = FAILED;
         }
     }
