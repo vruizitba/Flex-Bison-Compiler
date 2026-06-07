@@ -1,0 +1,8 @@
+class C {
+    public int g(int a, int a) {
+        return a;
+    }
+}
+
+main {
+}

@@ -142,6 +142,13 @@ bool registerClass(SymbolTable * table, Class * classNode) {
             }
         }
     }
+    for (Field * f1 = classNode->fields; f1 != NULL; f1 = f1->next) {
+        for (Field * f2 = f1->next; f2 != NULL; f2 = f2->next) {
+            if (strcmp(f1->name, f2->name) == 0) {
+                return false;
+            }
+        }
+    }
     if (table->classCount == table->classCapacity) {
         int newCapacity = table->classCapacity * 2;
         Class ** resizedClasses = realloc(table->classes, newCapacity * sizeof(Class *));

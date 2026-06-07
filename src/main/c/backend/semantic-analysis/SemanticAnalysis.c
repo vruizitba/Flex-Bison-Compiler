@@ -26,7 +26,7 @@ static CompilationStatus _collectDeclarations(SymbolTable * table, Program * pro
             logError(_logger, "Duplicate class declaration: '%s'.", class->name);
             status = FAILED;
         } else if (!registerClass(table, class)) {
-            logError(_logger, "Duplicate method signature in class '%s'.", class->name);
+            logError(_logger, "Duplicate member (field or method signature) in class '%s'.", class->name);
             status = FAILED;
         }
     }
@@ -156,7 +156,10 @@ static CompilationStatus _processBodies(SymbolTable * table, Program * program) 
     for (Function * function = program->functions; function != NULL; function = function->next) {
         pushScope(table);
         for (Parameter * p = function->parameters; p != NULL; p = p->next) {
-            declareVariable(table, p->name, p->type);
+            if (!declareVariable(table, p->name, p->type)) {
+                logError(_logger, "Duplicate parameter '%s' in function '%s'.", p->name, function->name);
+                status = FAILED;
+            }
         }
         if (_checkStatements(table, function->body) != SUCCEEDED) {
             status = FAILED;
@@ -169,7 +172,10 @@ static CompilationStatus _processBodies(SymbolTable * table, Program * program) 
         for (Method * method = class->methods; method != NULL; method = method->next) {
             pushScope(table);
             for (Parameter * p = method->parameters; p != NULL; p = p->next) {
-                declareVariable(table, p->name, p->type);
+                if (!declareVariable(table, p->name, p->type)) {
+                    logError(_logger, "Duplicate parameter '%s' in method '%s' of class '%s'.", p->name, method->name, class->name);
+                    status = FAILED;
+                }
             }
             if (_checkStatements(table, method->body) != SUCCEEDED) {
                 status = FAILED;
