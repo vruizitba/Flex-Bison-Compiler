@@ -148,6 +148,8 @@ struct Expression {
     /* Method-call annotations set by semantic analysis. Borrowed: not freed by destroyExpression. */
     Method * resolvedMethod;
     char * resolvedOwnerClass;
+    /* Field-access annotation set by semantic analysis: inheritance hops from the object's static class to the field's owner. */
+    int resolvedFieldDepth;
     union {
         int integerValue;
         double floatValue;

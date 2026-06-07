@@ -417,9 +417,9 @@ static bool _isAccessible(SymbolTable * table, Visibility visibility, const char
     return false;
 }
 
-static Type * _typeOfBinary(SymbolTable * table, Expression * expr) {
-    Type * left = typeOf(table, expr->binary.left);
-    Type * right = typeOf(table, expr->binary.right);
+static Type * _resolveBinaryType(SymbolTable * table, Expression * expr) {
+    Type * left = resolveExpressionType(table, expr->binary.left);
+    Type * right = resolveExpressionType(table, expr->binary.right);
     if (isTypeError(left) || isTypeError(right)) {
         return &_typeErrorSentinel;
     }
@@ -451,8 +451,8 @@ static Type * _typeOfBinary(SymbolTable * table, Expression * expr) {
     }
 }
 
-static Type * _typeOfFieldAccess(SymbolTable * table, Expression * expr) {
-    Type * objectType = typeOf(table, expr->fieldAccess.object);
+static Type * _resolveFieldAccessType(SymbolTable * table, Expression * expr) {
+    Type * objectType = resolveExpressionType(table, expr->fieldAccess.object);
     if (objectType == NULL || isTypeError(objectType) || objectType->kind != TYPEKIND_CLASS) {
         return &_typeErrorSentinel;
     }
@@ -467,10 +467,20 @@ static Type * _typeOfFieldAccess(SymbolTable * table, Expression * expr) {
     if (!_isAccessible(table, visibility, ownerName, getCurrentClass(table))) {
         return &_typeErrorSentinel;
     }
+    int depth = 0;
+    for (const char * className = objectType->className; className != NULL && strcmp(className, ownerName) != 0; ) {
+        Class * class = lookupClass(table, className);
+        if (class == NULL) {
+            break;
+        }
+        className = class->parentName;
+        depth++;
+    }
+    expr->resolvedFieldDepth = depth;
     return fieldType;
 }
 
-static Type * _typeOfCall(SymbolTable * table, Expression * expr) {
+static Type * _resolveCallType(SymbolTable * table, Expression * expr) {
     Expression * callee = expr->call.callee;
 
     /* Collect argument types (shared by method and free-function paths). */
@@ -486,7 +496,7 @@ static Type * _typeOfCall(SymbolTable * table, Expression * expr) {
         }
         int i = 0;
         for (ArgumentList * a = expr->call.arguments; a != NULL; a = a->next, i++) {
-            argTypes[i] = typeOf(table, a->expression);
+            argTypes[i] = resolveExpressionType(table, a->expression);
             if (isTypeError(argTypes[i])) {
                 free(argTypes);
                 return &_typeErrorSentinel;
@@ -495,7 +505,7 @@ static Type * _typeOfCall(SymbolTable * table, Expression * expr) {
     }
 
     if (callee->kind == EXPRESSION_FIELD_ACCESS || callee->kind == EXPRESSION_ARROW_ACCESS) {
-        Type * objectType = typeOf(table, callee->fieldAccess.object);
+        Type * objectType = resolveExpressionType(table, callee->fieldAccess.object);
         if (objectType == NULL || isTypeError(objectType) || objectType->kind != TYPEKIND_CLASS) {
             free(argTypes);
             return &_typeErrorSentinel;
@@ -508,10 +518,14 @@ static Type * _typeOfCall(SymbolTable * table, Expression * expr) {
         Visibility visibility = info->method->visibility;
         Type * returnType = info->method->returnType;
         const char * ownerName = info->ownerClassName;
-        free(info);
         if (!_isAccessible(table, visibility, ownerName, getCurrentClass(table))) {
+            free(info);
             return &_typeErrorSentinel;
         }
+        /* Annotate the call node for the code generator. */
+        expr->resolvedMethod = info->method;
+        expr->resolvedOwnerClass = info->ownerClassName;
+        free(info);
         return returnType != NULL ? returnType : &_typeVoidSentinel;
     }
     if (callee->kind == EXPRESSION_IDENTIFIER) {
@@ -533,108 +547,6 @@ static Type * _typeOfCall(SymbolTable * table, Expression * expr) {
     }
     free(argTypes);
     return NULL;
-}
-
-Type * typeOf(SymbolTable * table, Expression * expr) {
-    if (expr == NULL) {
-        return &_typeErrorSentinel;
-    }
-    switch (expr->kind) {
-        case EXPRESSION_INTEGER:
-            return &_typeIntSentinel;
-        case EXPRESSION_FLOAT:
-            return &_typeFloatSentinel;
-        case EXPRESSION_STRING:
-            return &_typeStringSentinel;
-        case EXPRESSION_CHAR:
-            return &_typeCharSentinel;
-        case EXPRESSION_BOOLEAN:
-            return &_typeBoolSentinel;
-        case EXPRESSION_THIS: {
-            const char * className = getCurrentClass(table);
-            if (className == NULL) {
-                return &_typeErrorSentinel;
-            }
-            Type * type = lookupClassType(table, className);
-            return type != NULL ? type : &_typeErrorSentinel;
-        }
-        case EXPRESSION_IDENTIFIER: {
-            Type * type = lookupVariable(table, expr->identifier);
-            if (type != NULL) {
-                return type;
-            }
-            Type * classType = lookupClassType(table, expr->identifier);
-            return classType != NULL ? classType : &_typeErrorSentinel;
-        }
-        case EXPRESSION_NEW: {
-            Type * type = lookupClassType(table, expr->newExpression.className);
-            return type != NULL ? type : &_typeErrorSentinel;
-        }
-        case EXPRESSION_BINARY:
-            return _typeOfBinary(table, expr);
-        case EXPRESSION_UNARY:
-            return typeOf(table, expr->unary.operand);
-        case EXPRESSION_FIELD_ACCESS:
-        case EXPRESSION_ARROW_ACCESS: {
-            Type * objectType = typeOf(table, expr->fieldAccess.object);
-            if (objectType == NULL || isTypeError(objectType) || objectType->kind != TYPEKIND_CLASS) {
-                return &_typeErrorSentinel;
-            }
-            FieldInfo * info = lookupField(table, objectType->className, expr->fieldAccess.field);
-            if (info == NULL) {
-                return &_typeErrorSentinel;
-            }
-            Visibility vis = info->field->visibility;
-            Type * fieldType = info->field->type;
-            const char * ownerName = info->ownerClassName;
-            free(info);
-            if (!_isAccessible(table, vis, ownerName, getCurrentClass(table))) {
-                return &_typeErrorSentinel;
-            }
-            return fieldType;
-        }
-        case EXPRESSION_CALL: {
-            Expression * callee = expr->call.callee;
-            int argCount = 0;
-            for (ArgumentList * a = expr->call.arguments; a != NULL; a = a->next) {
-                typeOf(table, a->expression);
-                argCount++;
-            }
-            if (callee->kind == EXPRESSION_FIELD_ACCESS || callee->kind == EXPRESSION_ARROW_ACCESS) {
-                Type * objectType = typeOf(table, callee->fieldAccess.object);
-                if (objectType == NULL || isTypeError(objectType) || objectType->kind != TYPEKIND_CLASS) {
-                    return &_typeErrorSentinel;
-                }
-                MethodInfo * info = lookupMethod(table, objectType->className, callee->fieldAccess.field, NULL, argCount);
-                if (info == NULL) {
-                    return &_typeErrorSentinel;
-                }
-                Visibility vis = info->method->visibility;
-                Type * returnType = info->method->returnType;
-                const char * ownerName = info->ownerClassName;
-                if (!_isAccessible(table, vis, ownerName, getCurrentClass(table))) {
-                    free(info);
-                    return &_typeErrorSentinel;
-                }
-                /* Annotate the call node for the code generator . */
-                expr->resolvedMethod = info->method;
-                expr->resolvedOwnerClass = info->ownerClassName;
-                free(info);
-                return returnType != NULL ? returnType : &_typeVoidSentinel;
-            }
-            if (callee->kind == EXPRESSION_IDENTIFIER) {
-                Function * fn = lookupFunction(table, callee->identifier);
-                if (fn == NULL) {
-                    return &_typeErrorSentinel;
-                }
-                return fn->returnType != NULL ? fn->returnType : &_typeVoidSentinel;
-            }
-            return NULL;
-        }
-        default:
-            /* Expression kind not yet typed. Return NULL (unknown, not a known error). */
-            return NULL;
-    }
 }
 
 bool isAssignable(SymbolTable * table, Type * from, Type * to) {
@@ -696,4 +608,53 @@ void setCurrentFunction(SymbolTable * table, const char * functionName) {
 
 const char * getCurrentFunction(SymbolTable * table) {
     return table != NULL ? table->currentFunction : NULL;
+}
+
+Type * resolveExpressionType(SymbolTable * table, Expression * expr) {
+    if (expr == NULL) {
+        return &_typeErrorSentinel;
+    }
+    switch (expr->kind) {
+        case EXPRESSION_INTEGER:
+            return &_typeIntSentinel;
+        case EXPRESSION_FLOAT:
+            return &_typeFloatSentinel;
+        case EXPRESSION_STRING:
+            return &_typeStringSentinel;
+        case EXPRESSION_CHAR:
+            return &_typeCharSentinel;
+        case EXPRESSION_BOOLEAN:
+            return &_typeBoolSentinel;
+        case EXPRESSION_THIS: {
+            const char * className = getCurrentClass(table);
+            if (className == NULL) {
+                return &_typeErrorSentinel;
+            }
+            Type * type = lookupClassType(table, className);
+            return type != NULL ? type : &_typeErrorSentinel;
+        }
+        case EXPRESSION_IDENTIFIER: {
+            Type * type = lookupVariable(table, expr->identifier);
+            if (type != NULL) {
+                return type;
+            }
+            Type * classType = lookupClassType(table, expr->identifier);
+            return classType != NULL ? classType : &_typeErrorSentinel;
+        }
+        case EXPRESSION_NEW: {
+            Type * type = lookupClassType(table, expr->newExpression.className);
+            return type != NULL ? type : &_typeErrorSentinel;
+        }
+        case EXPRESSION_BINARY:
+            return _resolveBinaryType(table, expr);
+        case EXPRESSION_UNARY:
+            return resolveExpressionType(table, expr->unary.operand);
+        case EXPRESSION_FIELD_ACCESS:
+        case EXPRESSION_ARROW_ACCESS:
+            return _resolveFieldAccessType(table, expr);
+        case EXPRESSION_CALL:
+            return _resolveCallType(table, expr);
+        default:
+            return NULL;
+    }
 }

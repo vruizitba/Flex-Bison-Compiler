@@ -43,7 +43,7 @@ bool declareVariable(SymbolTable * table, const char * name, Type * type);
 Type * lookupVariable(SymbolTable * table, const char * name);
 
 /* ---- Type checker ---- */
-Type * typeOf(SymbolTable * table, Expression * expr);
+Type * resolveExpressionType(SymbolTable * table, Expression * expr);
 bool isAssignable(SymbolTable * table, Type * from, Type * to);
 
 /** Returns the ⊥ (error) type sentinel. Safe to return from any function; never freed. */

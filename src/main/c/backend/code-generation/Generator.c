@@ -34,6 +34,9 @@ static void _generateClassesInOrder(Program * program);
 static char * _manglingTypeName(Type * type);
 static char * _generateMangling(Parameter * params);
 static void _generateParams(Parameter * params, const char * className);
+static void _generateSignature(const char * retType, const char * name, Parameter * params, const char * selfClass);
+static void _generatePrototypes(Program * program);
+static bool _classHasConstructor(Class * classNode);
 static void _generateMethod(Class * classNode, Method * method);
 static void _generateConstructor(Class * classNode, Method * method);
 static void _generateClassMethods(Class * classNode);
@@ -538,7 +541,11 @@ static void _generateExpression(Expression * expr) {
 		case EXPRESSION_FIELD_ACCESS:
 		case EXPRESSION_ARROW_ACCESS:
 			_generateExpression(expr->fieldAccess.object);
-			_output(0, "->%s", expr->fieldAccess.field);
+			_output(0, "->");
+			for (int i = 0; i < expr->resolvedFieldDepth; i++) {
+				_output(0, "parent.");
+			}
+			_output(0, "%s", expr->fieldAccess.field);
 			break;
 		case EXPRESSION_INDEX:
 			_generateExpression(expr->indexAccess.array);
@@ -654,32 +661,92 @@ static void _generateStatementList(StatementList * list, unsigned int indent) {
 	}
 }
 
+static void _generateSignature(const char * retType, const char * name, Parameter * params, const char * selfClass) {
+	_output(0, "%s %s", retType, name);
+	_generateParams(params, selfClass);
+}
+
+/** Emits forward declarations (prototypes) for every method, constructor and free function. */
+static void _generatePrototypes(Program * program) {
+	for (Class * c = program->classes; c != NULL; c = c->next) {
+		if (!_classHasConstructor(c)) {
+			_output(0, "%s * %s__new();\n", c->name, c->name);
+		}
+		for (Method * m = c->methods; m != NULL; m = m->next) {
+			char * mangling = _generateMangling(m->parameters);
+			if (m->isConstructor) {
+				char * retType = concatenate(2, c->name, " *");
+				char * name = concatenate(3, c->name, "__new", mangling);
+				_generateSignature(retType, name, m->parameters, NULL);
+				free(retType);
+				free(name);
+			} else {
+				char * retType = _generateTypeName(m->returnType);
+				char * name = concatenate(4, c->name, "__", m->name, mangling);
+				const char * selfClass = m->isStatic ? NULL : c->name;
+				_generateSignature(retType, name, m->parameters, selfClass);
+				free(retType);
+				free(name);
+			}
+			free(mangling);
+			_output(0, ";\n");
+		}
+	}
+	for (Function * f = program->functions; f != NULL; f = f->next) {
+		char * retType = _generateTypeName(f->returnType);
+		_generateSignature(retType, f->name, f->parameters, NULL);
+		free(retType);
+		_output(0, ";\n");
+	}
+	_output(0, "\n");
+}
+
 static void _generateMethod(Class * classNode, Method * method) {
 	char * mangling = _generateMangling(method->parameters);
 	char * retType = _generateTypeName(method->returnType);
 	const char * selfClass = method->isStatic ? NULL : classNode->name;
-	_output(0, "%s %s__%s%s", retType, classNode->name, method->name, mangling);
+	char * name = concatenate(4, classNode->name, "__", method->name, mangling);
+	_generateSignature(retType, name, method->parameters, selfClass);
 	free(mangling);
 	free(retType);
-	_generateParams(method->parameters, selfClass);
+	free(name);
 	_output(0, " {\n");
 	_generateStatementList(method->body, 1);
 	_output(0, "}\n\n");
 }
 
+/** True if the class declares at least one constructor. */
+static bool _classHasConstructor(Class * classNode) {
+	for (Method * m = classNode->methods; m != NULL; m = m->next) {
+		if (m->isConstructor) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/** Generates a constructor. A NULL method emits the implicit default constructor (no params, no body). */
 static void _generateConstructor(Class * classNode, Method * method) {
-	char * mangling = _generateMangling(method->parameters);
-	_output(0, "%s * %s__new%s", classNode->name, classNode->name, mangling);
+	Parameter * params = method ? method->parameters : NULL;
+	StatementList * body = method ? method->body : NULL;
+	char * mangling = _generateMangling(params);
+	char * retType = concatenate(2, classNode->name, " *");
+	char * name = concatenate(3, classNode->name, "__new", mangling);
+	_generateSignature(retType, name, params, NULL);
 	free(mangling);
-	_generateParams(method->parameters, NULL);
+	free(retType);
+	free(name);
 	_output(0, " {\n");
 	_output(1, "%s * self = _xmalloc(sizeof(%s));\n", classNode->name, classNode->name);
-	_generateStatementList(method->body, 1);
+	_generateStatementList(body, 1);
 	_output(1, "return self;\n");
 	_output(0, "}\n\n");
 }
 
 static void _generateClassMethods(Class * classNode) {
+	if (!_classHasConstructor(classNode)) {
+		_generateConstructor(classNode, NULL);
+	}
 	for (Method * m = classNode->methods; m != NULL; m = m->next) {
 		if (m->isConstructor) {
 			_generateConstructor(classNode, m);
@@ -704,9 +771,8 @@ static void _generatePrologue(void) {
 
 static void _generateFunction(Function * function) {
 	char * retType = _generateTypeName(function->returnType);
-	_output(0, "%s %s", retType, function->name);
+	_generateSignature(retType, function->name, function->parameters, NULL);
 	free(retType);
-	_generateParams(function->parameters, NULL);
 	_output(0, " {\n");
 	_generateStatementList(function->body, 1);
 	_output(0, "}\n\n");
@@ -736,6 +802,7 @@ void executeGenerator(CompilerState * compilerState) {
 	logDebugging(_logger, "Generating C output...");
 	_generatePrologue();
 	_generateForwardDeclarations(program);
+	_generatePrototypes(program);
 	_generateClassesInOrder(program);
 	for (Class * c = program->classes; c != NULL; c = c->next) {
 		_generateClassMethods(c);
