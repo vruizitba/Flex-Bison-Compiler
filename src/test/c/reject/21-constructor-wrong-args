@@ -1,0 +1,6 @@
+class P {
+    public P(int a) {}
+}
+main {
+    P p = new P(1, 2, 3);
+}

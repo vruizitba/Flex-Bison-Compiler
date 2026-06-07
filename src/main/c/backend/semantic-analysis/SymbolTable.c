@@ -462,11 +462,19 @@ static Type * _resolveBinaryType(SymbolTable * table, Expression * expr) {
         case BINARY_OPERATOR_OR:
             return &_typeBoolSentinel;
         case BINARY_OPERATOR_ASSIGN:
+            if (!isAssignable(table, right, left)) {
+                return &_typeErrorSentinel;
+            }
+            return left;
         case BINARY_OPERATOR_PLUS_ASSIGN:
         case BINARY_OPERATOR_MINUS_ASSIGN:
         case BINARY_OPERATOR_MUL_ASSIGN:
         case BINARY_OPERATOR_DIV_ASSIGN:
         case BINARY_OPERATOR_MOD_ASSIGN:
+            if (_numericRank(left->kind) == NUMERIC_RANK_NONE ||
+                _numericRank(right->kind) == NUMERIC_RANK_NONE) {
+                return &_typeErrorSentinel;
+            }
             return left;
         default:
             return &_typeErrorSentinel;
@@ -502,28 +510,71 @@ static Type * _resolveFieldAccessType(SymbolTable * table, Expression * expr) {
     return fieldType;
 }
 
+static bool _collectArgTypes(SymbolTable * table, ArgumentList * args, Type *** outTypes, int * outCount) {
+    int argCount = 0;
+    for (ArgumentList * a = args; a != NULL; a = a->next) {
+        argCount++;
+    }
+    *outCount = argCount;
+    *outTypes = NULL;
+    if (argCount == 0) {
+        return true;
+    }
+    Type ** argTypes = malloc(argCount * sizeof(Type *));
+    if (argTypes == NULL) {
+        return false;
+    }
+    int i = 0;
+    for (ArgumentList * a = args; a != NULL; a = a->next, i++) {
+        argTypes[i] = resolveExpressionType(table, a->expression);
+        if (isTypeError(argTypes[i])) {
+            free(argTypes);
+            return false;
+        }
+    }
+    *outTypes = argTypes;
+    return true;
+}
+
+static Type * _resolveNewType(SymbolTable * table, Expression * expr) {
+    Type * type = lookupClassType(table, expr->newExpression.className);
+    if (type == NULL) {
+        return &_typeErrorSentinel;
+    }
+    Type ** argTypes = NULL;
+    int argCount = 0;
+    if (!_collectArgTypes(table, expr->newExpression.arguments, &argTypes, &argCount)) {
+        return &_typeErrorSentinel;
+    }
+    Class * class = lookupClass(table, expr->newExpression.className);
+    bool hasConstructor = false;
+    for (Method * method = class->methods; method != NULL; method = method->next) {
+        if (method->isConstructor) {
+            hasConstructor = true;
+            break;
+        }
+    }
+    if (!hasConstructor) {
+        free(argTypes);
+        return argCount == 0 ? type : &_typeErrorSentinel;
+    }
+    MethodInfo * info = lookupMethod(table, expr->newExpression.className,
+                                     expr->newExpression.className, argTypes, argCount);
+    free(argTypes);
+    if (info == NULL) {
+        return &_typeErrorSentinel;
+    }
+    free(info);
+    return type;
+}
+
 static Type * _resolveCallType(SymbolTable * table, Expression * expr) {
     Expression * callee = expr->call.callee;
 
-    /* Collect argument types (shared by method and free-function paths). */
-    int argCount = 0;
-    for (ArgumentList * a = expr->call.arguments; a != NULL; a = a->next) {
-        argCount++;
-    }
     Type ** argTypes = NULL;
-    if (argCount > 0) {
-        argTypes = malloc(argCount * sizeof(Type *));
-        if (argTypes == NULL) {
-            return &_typeErrorSentinel;
-        }
-        int i = 0;
-        for (ArgumentList * a = expr->call.arguments; a != NULL; a = a->next, i++) {
-            argTypes[i] = resolveExpressionType(table, a->expression);
-            if (isTypeError(argTypes[i])) {
-                free(argTypes);
-                return &_typeErrorSentinel;
-            }
-        }
+    int argCount = 0;
+    if (!_collectArgTypes(table, expr->call.arguments, &argTypes, &argCount)) {
+        return &_typeErrorSentinel;
     }
 
     if (callee->kind == EXPRESSION_FIELD_ACCESS || callee->kind == EXPRESSION_ARROW_ACCESS) {
@@ -560,7 +611,7 @@ static Type * _resolveCallType(SymbolTable * table, Expression * expr) {
             free(argTypes);
             return &_typeErrorSentinel;
         }
-        if (argTypes != NULL && !_argsMatchParams(table, argTypes, argCount, function->parameters)) {
+        if (!_argsMatchParams(table, argTypes, argCount, function->parameters)) {
             free(argTypes);
             return &_typeErrorSentinel;
         }
@@ -663,10 +714,8 @@ Type * resolveExpressionType(SymbolTable * table, Expression * expr) {
             Type * classType = lookupClassType(table, expr->identifier);
             return classType != NULL ? classType : &_typeErrorSentinel;
         }
-        case EXPRESSION_NEW: {
-            Type * type = lookupClassType(table, expr->newExpression.className);
-            return type != NULL ? type : &_typeErrorSentinel;
-        }
+        case EXPRESSION_NEW:
+            return _resolveNewType(table, expr);
         case EXPRESSION_BINARY:
             return _resolveBinaryType(table, expr);
         case EXPRESSION_UNARY:

@@ -1,0 +1,4 @@
+main {
+    string s;
+    s += "x";
+}

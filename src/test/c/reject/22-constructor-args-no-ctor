@@ -1,0 +1,5 @@
+class Q {
+}
+main {
+    Q q = new Q(5);
+}
