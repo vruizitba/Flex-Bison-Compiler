@@ -248,6 +248,7 @@ static void _generateClassesInOrder(Program * program) {
 	bool * emitted = calloc(total, sizeof(bool));
 	int done = 0;
 	while (done < total) {
+		int doneBeforePass = done;
 		int idx = 0;
 		for (Class * c = program->classes; c != NULL; c = c->next, idx++) {
 			if (emitted[idx]) {
@@ -268,6 +269,10 @@ static void _generateClassesInOrder(Program * program) {
 				emitted[idx] = true;
 				done++;
 			}
+		}
+		if (done == doneBeforePass) {
+			logError(_logger, "Inheritance cycle detected during code generation; aborting.");
+			break;
 		}
 	}
 	free(emitted);
