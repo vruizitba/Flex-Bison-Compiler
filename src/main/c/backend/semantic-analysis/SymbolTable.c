@@ -194,6 +194,21 @@ Class * lookupClass(SymbolTable * table, const char * name) {
     return NULL;
 }
 
+bool hasInheritanceCycle(SymbolTable * table, const char * className) {
+    Class * current = lookupClass(table, className);
+    int steps = 0;
+    while (current != NULL && current->parentName != NULL) {
+        current = lookupClass(table, current->parentName);
+        if (current == NULL) {
+            return false; /* undefined parent: not a cycle (reported elsewhere) */
+        }
+        if (++steps > table->classCount) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static Type * lookupClassType(SymbolTable * table, const char * name) {
     for (int i = 0; i < table->classCount; i++) {
         if (strcmp(table->classes[i]->name, name) == 0) {

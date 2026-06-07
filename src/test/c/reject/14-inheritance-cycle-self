@@ -1,0 +1,9 @@
+/*
+ * Stage III must reject: a class cannot extend itself.
+ * Without cycle detection the parent-chain walk loops forever (hang).
+ */
+class A extends A {
+    public int x;
+}
+main {
+}

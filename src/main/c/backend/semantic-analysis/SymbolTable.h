@@ -33,6 +33,10 @@ Function * lookupFunction(SymbolTable * table, const char * name);
 FieldInfo * lookupField(SymbolTable * table, const char * className, const char * fieldName);
 /** Matches by name, param count (argCount < 0 = any arity), and arg types when argTypes != NULL. Returns a heap-allocated MethodInfo (caller frees), or NULL if no overload matches. */
 MethodInfo * lookupMethod(SymbolTable * table, const char * className, const char * methodName, Type ** argTypes, int argCount);
+/** True if following parentName from className loops back (self or mutual extends).
+ * The walk is bounded by the number of registered classes so it always terminates,
+ * even on a cycle. Undefined parents are not cycles (reported separately). */
+bool hasInheritanceCycle(SymbolTable * table, const char * className);
 
 /* ---- Scope stack ---- */
 void pushScope(SymbolTable * table);

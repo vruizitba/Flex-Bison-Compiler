@@ -39,6 +39,14 @@ static CompilationStatus _collectDeclarations(SymbolTable * table, Program * pro
         }
     }
 
+    /* Detect inheritance cycles before any parent-chain walk in _processBodies. */
+    for (Class * class = program->classes; class != NULL; class = class->next) {
+        if (hasInheritanceCycle(table, class->name)) {
+            logError(_logger, "Inheritance cycle detected involving class '%s'.", class->name);
+            status = FAILED;
+        }
+    }
+
     /* Register free functions. */
     for (Function * function = program->functions; function != NULL; function = function->next) {
         if (!registerFunction(table, function)) {

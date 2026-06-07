@@ -1,0 +1,12 @@
+/*
+ * Stage III must reject: mutual inheritance A -> B -> A forms a cycle.
+ * Without cycle detection the parent-chain walk loops forever (hang).
+ */
+class A extends B {
+    public int x;
+}
+class B extends A {
+    public int y;
+}
+main {
+}
