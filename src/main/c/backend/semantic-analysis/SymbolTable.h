@@ -59,5 +59,7 @@ void setCurrentClass(SymbolTable * table, const char * className);
 const char * getCurrentClass(SymbolTable * table);
 void setCurrentFunction(SymbolTable * table, const char * functionName);
 const char * getCurrentFunction(SymbolTable * table);
+void setCurrentReturnType(SymbolTable * table, Type * returnType);
+Type * getCurrentReturnType(SymbolTable * table);
 
 #endif

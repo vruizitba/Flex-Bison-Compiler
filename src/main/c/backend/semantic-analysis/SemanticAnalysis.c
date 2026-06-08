@@ -4,6 +4,14 @@
 
 static Logger * _logger = NULL;
 
+/* Expected return type (currentReturnType in SymbolTable) by context:
+ *   - constructor      -> NULL              (method->returnType is NULL)
+ *   - void fn/method   -> a TYPEKIND_VOID Type (the node's own returnType)
+ *   - main body        -> &_voidReturnType  (this explicit VOID sentinel)
+ * main has no return-type node, so it borrows this sentinel; using VOID
+ * (not NULL) keeps main distinguishable from a constructor context. */
+static Type _voidReturnType = { .kind = TYPEKIND_VOID };
+
 static void _shutdownSemanticAnalysisModule() {
     if (_logger != NULL) {
         logDebugging(_logger, "Destroying module: SemanticAnalysis...");
@@ -98,7 +106,10 @@ static CompilationStatus _checkStatement(SymbolTable * table, Statement * statem
         }
         case STATEMENT_IF: {
             CompilationStatus status = SUCCEEDED;
-            resolveExpressionType(table, statement->ifStatement.condition);
+            if (isTypeError(resolveExpressionType(table, statement->ifStatement.condition))) {
+                logError(_logger, "Invalid 'if' condition.");
+                status = FAILED;
+            }
             if (_checkStatement(table, statement->ifStatement.thenBranch) != SUCCEEDED) {
                 status = FAILED;
             }
@@ -109,9 +120,17 @@ static CompilationStatus _checkStatement(SymbolTable * table, Statement * statem
             }
             return status;
         }
-        case STATEMENT_WHILE:
-            resolveExpressionType(table, statement->whileStatement.condition);
-            return _checkStatement(table, statement->whileStatement.body);
+        case STATEMENT_WHILE: {
+            CompilationStatus status = SUCCEEDED;
+            if (isTypeError(resolveExpressionType(table, statement->whileStatement.condition))) {
+                logError(_logger, "Invalid 'while' condition.");
+                status = FAILED;
+            }
+            if (_checkStatement(table, statement->whileStatement.body) != SUCCEEDED) {
+                status = FAILED;
+            }
+            return status;
+        }
         case STATEMENT_FOR: {
             pushScope(table);
             CompilationStatus status = SUCCEEDED;
@@ -120,17 +139,45 @@ static CompilationStatus _checkStatement(SymbolTable * table, Statement * statem
                     status = FAILED;
                 }
             }
-            resolveExpressionType(table, statement->forStatement.condition);
-            resolveExpressionType(table, statement->forStatement.step);
+            if (isTypeError(resolveExpressionType(table, statement->forStatement.condition))) {
+                logError(_logger, "Invalid 'for' condition.");
+                status = FAILED;
+            }
+            if (isTypeError(resolveExpressionType(table, statement->forStatement.step))) {
+                logError(_logger, "Invalid 'for' step expression.");
+                status = FAILED;
+            }
             if (_checkStatement(table, statement->forStatement.body) != SUCCEEDED) {
                 status = FAILED;
             }
             popScope(table);
             return status;
         }
-        case STATEMENT_RETURN:
-            resolveExpressionType(table, statement->returnStatement.value);
+        case STATEMENT_RETURN: {
+            Type * expected = getCurrentReturnType(table);
+            Expression * value = statement->returnStatement.value;
+            if (value != NULL) {
+                Type * actual = resolveExpressionType(table, value);
+                if (isTypeError(actual)) {
+                    logError(_logger, "Invalid return expression.");
+                    return FAILED;
+                }
+                if (expected == NULL || expected->kind == TYPEKIND_VOID) {
+                    logError(_logger, "Return with a value in a void context.");
+                    return FAILED;
+                }
+                if (actual != NULL && !isAssignable(table, actual, expected)) {
+                    logError(_logger, "Return type mismatch.");
+                    return FAILED;
+                }
+            } else {
+                if (expected != NULL && expected->kind != TYPEKIND_VOID) {
+                    logError(_logger, "Missing return value.");
+                    return FAILED;
+                }
+            }
             return SUCCEEDED;
+        }
         case STATEMENT_EXPRESSION: {
             Type * t = resolveExpressionType(table, statement->expressionStatement);
             if (isTypeError(t)) {
@@ -148,13 +195,16 @@ static CompilationStatus _processBodies(SymbolTable * table, Program * program) 
     CompilationStatus status = SUCCEEDED;
 
     pushScope(table);
+    setCurrentReturnType(table, &_voidReturnType);
     if (_checkStatements(table, program->mainBody) != SUCCEEDED) {
         status = FAILED;
     }
+    setCurrentReturnType(table, NULL);
     popScope(table);
 
     for (Function * function = program->functions; function != NULL; function = function->next) {
         pushScope(table);
+        setCurrentReturnType(table, function->returnType);
         for (Parameter * p = function->parameters; p != NULL; p = p->next) {
             if (!declareVariable(table, p->name, p->type)) {
                 logError(_logger, "Duplicate parameter '%s' in function '%s'.", p->name, function->name);
@@ -164,6 +214,7 @@ static CompilationStatus _processBodies(SymbolTable * table, Program * program) 
         if (_checkStatements(table, function->body) != SUCCEEDED) {
             status = FAILED;
         }
+        setCurrentReturnType(table, NULL);
         popScope(table);
     }
 
@@ -171,6 +222,7 @@ static CompilationStatus _processBodies(SymbolTable * table, Program * program) 
         setCurrentClass(table, class->name);
         for (Method * method = class->methods; method != NULL; method = method->next) {
             pushScope(table);
+            setCurrentReturnType(table, method->returnType);
             for (Parameter * p = method->parameters; p != NULL; p = p->next) {
                 if (!declareVariable(table, p->name, p->type)) {
                     logError(_logger, "Duplicate parameter '%s' in method '%s' of class '%s'.", p->name, method->name, class->name);
@@ -180,6 +232,7 @@ static CompilationStatus _processBodies(SymbolTable * table, Program * program) 
             if (_checkStatements(table, method->body) != SUCCEEDED) {
                 status = FAILED;
             }
+            setCurrentReturnType(table, NULL);
             popScope(table);
         }
         setCurrentClass(table, NULL);

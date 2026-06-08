@@ -450,7 +450,7 @@ static void _generateExpression(Expression * expr) {
 			_output(0, ")");
 			break;
 		}
-		case EXPRESSION_UNARY: {
+		case EXPRESSION_UNARY:
 			switch (expr->unary.operator) {
 				case UNARY_OPERATOR_NOT:
 					_output(0, "!");
@@ -489,7 +489,6 @@ static void _generateExpression(Expression * expr) {
 					break;
 			}
 			break;
-		}
 		case EXPRESSION_NEW: {
 			Class * targetClass = NULL;
 			for (Class * c = _currentProgram->classes; c != NULL && targetClass == NULL; c = c->next) {

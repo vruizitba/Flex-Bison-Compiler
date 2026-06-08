@@ -1,0 +1,8 @@
+class A {
+    public void g() {
+        return 5;
+    }
+}
+
+main {
+}

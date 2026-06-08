@@ -44,6 +44,7 @@ struct SymbolTable {
 
     const char * currentClass;
     const char * currentFunction;
+    Type * currentReturnType;   /* (NULL = constructor) */
 };
 
 /* ---- Lifecycle ---- */
@@ -730,6 +731,16 @@ void setCurrentFunction(SymbolTable * table, const char * functionName) {
 
 const char * getCurrentFunction(SymbolTable * table) {
     return table != NULL ? table->currentFunction : NULL;
+}
+
+void setCurrentReturnType(SymbolTable * table, Type * returnType) {
+    if (table != NULL) {
+        table->currentReturnType = returnType;
+    }
+}
+
+Type * getCurrentReturnType(SymbolTable * table) {
+    return table != NULL ? table->currentReturnType : NULL;
 }
 
 Type * resolveExpressionType(SymbolTable * table, Expression * expr) {
