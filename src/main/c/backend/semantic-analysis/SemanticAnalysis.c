@@ -1,6 +1,8 @@
 #include "SemanticAnalysis.h"
 #include "SymbolTable.h"
 #include "../../support/logging/Logger.h"
+#include <stdlib.h>
+#include <string.h>
 
 static Logger * _logger = NULL;
 
@@ -85,6 +87,44 @@ static CompilationStatus _checkStatement(SymbolTable * table, Statement * statem
     switch (statement->kind) {
         case STATEMENT_VARIABLE_DECLARATION: {
             Type * declaredType = statement->variableDeclaration.type;
+
+            /* Rewrite decl-vs-expr: "x * y;" is parsed as a pointer declaration when x looks
+             * like a type name. If x is not a registered class, rewrite to a MUL expression. */
+            if (declaredType->kind == TYPEKIND_POINTER &&
+                declaredType->inner != NULL &&
+                declaredType->inner->kind == TYPEKIND_CLASS &&
+                lookupClass(table, declaredType->inner->className) == NULL) {
+
+                char * leftName  = strdup(declaredType->inner->className);
+                char * rightName = strdup(statement->variableDeclaration.name);
+                destroyType(statement->variableDeclaration.type);
+                free(statement->variableDeclaration.name);
+                destroyExpression(statement->variableDeclaration.initializer);
+
+                Expression * left = calloc(1, sizeof(Expression));
+                left->kind = EXPRESSION_IDENTIFIER;
+                left->identifier = leftName;
+
+                Expression * right = calloc(1, sizeof(Expression));
+                right->kind = EXPRESSION_IDENTIFIER;
+                right->identifier = rightName;
+
+                Expression * mul = calloc(1, sizeof(Expression));
+                mul->kind = EXPRESSION_BINARY;
+                mul->binary.operator = BINARY_OPERATOR_MUL;
+                mul->binary.left = left;
+                mul->binary.right = right;
+
+                statement->kind = STATEMENT_EXPRESSION;
+                statement->expressionStatement = mul;
+
+                if (isTypeError(resolveExpressionType(table, mul))) {
+                    logError(_logger, "Undefined identifier in expression statement.");
+                    return FAILED;
+                }
+                return SUCCEEDED;
+            }
+
             if (statement->variableDeclaration.initializer != NULL) {
                 Type * initType = resolveExpressionType(table, statement->variableDeclaration.initializer);
                 if (initType != NULL && !isAssignable(table, initType, declaredType)) {

@@ -217,6 +217,19 @@ static char * _generateTypeName(Type * type) {
 		case TYPEKIND_DOUBLE: return strdup("double");
 		case TYPEKIND_VOID:   return strdup("void");
 		case TYPEKIND_CLASS:  return concatenate(2, type->className, " *");
+		case TYPEKIND_POINTER: {
+			char * inner = _generateTypeName(type->inner);
+			char * result = concatenate(2, inner, " *");
+			free(inner);
+			return result;
+		}
+		case TYPEKIND_ARRAY: {
+			/* As a general type (return, parameter): decay to pointer. */
+			char * inner = _generateTypeName(type->inner);
+			char * result = concatenate(2, inner, " *");
+			free(inner);
+			return result;
+		}
 		default:
 			logError(_logger, "Unknown type kind: %d", type->kind);
 			return strdup("void");
@@ -298,6 +311,18 @@ static char * _manglingTypeName(Type * type) {
 		case TYPEKIND_DOUBLE: return strdup("double");
 		case TYPEKIND_VOID:   return strdup("void");
 		case TYPEKIND_CLASS:  return strdup(type->className);
+		case TYPEKIND_POINTER: {
+			char * inner = _manglingTypeName(type->inner);
+			char * result = concatenate(2, inner, "ptr");
+			free(inner);
+			return result;
+		}
+		case TYPEKIND_ARRAY: {
+			char * inner = _manglingTypeName(type->inner);
+			char * result = concatenate(2, inner, "arr");
+			free(inner);
+			return result;
+		}
 		default:              return strdup("unknown");
 	}
 }

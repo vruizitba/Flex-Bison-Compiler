@@ -45,6 +45,11 @@ struct SymbolTable {
     const char * currentClass;
     const char * currentFunction;
     Type * currentReturnType;   /* (NULL = constructor) */
+
+    /* Types heap-allocated during type-checking (e.g. address-of results). Freed on destroy. */
+    Type ** allocatedTypes;
+    int allocatedTypesCount;
+    int allocatedTypesCapacity;
 };
 
 /* ---- Lifecycle ---- */
@@ -82,6 +87,16 @@ SymbolTable * createSymbolTable() {
         free(table);
         return NULL;
     }
+    table->allocatedTypesCapacity = INITIAL_CAPACITY;
+    table->allocatedTypes = malloc(table->allocatedTypesCapacity * sizeof(Type *));
+    if (table->allocatedTypes == NULL) {
+        free(table->scopes);
+        free(table->functions);
+        free(table->classTypes);
+        free(table->classes);
+        free(table);
+        return NULL;
+    }
     return table;
 }
 
@@ -96,7 +111,26 @@ void destroySymbolTable(SymbolTable * table) {
     free(table->scopes);
     free(table->functions);
     free(table->classes);
+    for (int i = 0; i < table->allocatedTypesCount; i++) {
+        free(table->allocatedTypes[i]);
+    }
+    free(table->allocatedTypes);
     free(table);
+}
+
+static Type * _trackAllocatedType(SymbolTable * table, Type * type) {
+    if (table->allocatedTypesCount == table->allocatedTypesCapacity) {
+        int newCapacity = table->allocatedTypesCapacity * 2;
+        Type ** resized = realloc(table->allocatedTypes, newCapacity * sizeof(Type *));
+        if (resized == NULL) {
+            free(type);
+            return &_typeErrorSentinel;
+        }
+        table->allocatedTypes = resized;
+        table->allocatedTypesCapacity = newCapacity;
+    }
+    table->allocatedTypes[table->allocatedTypesCount++] = type;
+    return type;
 }
 
 /* ---- Registration ---- */
@@ -112,6 +146,9 @@ static bool _typesEqual(Type * a, Type * b) {
     }
     if (a->kind == TYPEKIND_CLASS) {
         return strcmp(a->className, b->className) == 0;
+    }
+    if (a->kind == TYPEKIND_POINTER || a->kind == TYPEKIND_ARRAY) {
+        return _typesEqual(a->inner, b->inner);
     }
     return true;
 }
@@ -471,7 +508,24 @@ static Type * _resolveUnaryType(SymbolTable * table, Expression * expr) {
         case UNARY_OPERATOR_POST_DECREMENT:
             return _numericRank(operand->kind) != NUMERIC_RANK_NONE ? operand : &_typeErrorSentinel;
         case UNARY_OPERATOR_DEREFERENCE:
-        case UNARY_OPERATOR_ADDRESS_OF:
+            if (operand->kind != TYPEKIND_POINTER && operand->kind != TYPEKIND_ARRAY) {
+                return &_typeErrorSentinel;
+            }
+            return operand->inner;
+        case UNARY_OPERATOR_ADDRESS_OF: {
+            ExpressionKind kind = expr->unary.operand->kind;
+            if (kind != EXPRESSION_IDENTIFIER && kind != EXPRESSION_FIELD_ACCESS &&
+                kind != EXPRESSION_ARROW_ACCESS && kind != EXPRESSION_INDEX) {
+                return &_typeErrorSentinel;
+            }
+            Type * ptrType = calloc(1, sizeof(Type));
+            if (ptrType == NULL) {
+                return &_typeErrorSentinel;
+            }
+            ptrType->kind = TYPEKIND_POINTER;
+            ptrType->inner = operand;
+            return _trackAllocatedType(table, ptrType);
+        }
         default:
             return &_typeErrorSentinel;
     }
@@ -683,6 +737,12 @@ bool isAssignable(SymbolTable * table, Type * from, Type * to) {
     NumericRank toRank   = _numericRank(to->kind);
     if (fromRank != NUMERIC_RANK_NONE && toRank != NUMERIC_RANK_NONE) {
         return fromRank <= toRank;
+    }
+    if ((from->kind == TYPEKIND_POINTER || from->kind == TYPEKIND_ARRAY) && to->kind == TYPEKIND_POINTER) {
+        return _typesEqual(from->inner, to->inner);
+    }
+    if (from->kind == TYPEKIND_ARRAY && to->kind == TYPEKIND_ARRAY) {
+        return _typesEqual(from->inner, to->inner);
     }
     if (from->kind != to->kind) {
         return false;

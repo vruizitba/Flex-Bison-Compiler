@@ -1,0 +1,16 @@
+class Foo {
+    public int f(int* a) {
+        return 0;
+    }
+    public int f(char* a) {
+        return 0;
+    }
+}
+
+main {
+    int x = 0;
+    char c = 'a';
+    Foo foo = new Foo();
+    foo.f(&x);
+    foo.f(&c);
+}
