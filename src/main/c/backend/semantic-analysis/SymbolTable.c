@@ -439,6 +439,43 @@ static bool _isAccessible(SymbolTable * table, Visibility visibility, const char
     return false;
 }
 
+static bool _areComparable(SymbolTable * table, Type * a, Type * b) {
+    if (_numericRank(a->kind) != NUMERIC_RANK_NONE && _numericRank(b->kind) != NUMERIC_RANK_NONE) {
+        return true;
+    }
+    if (a->kind == TYPEKIND_BOOL && b->kind == TYPEKIND_BOOL) {
+        return true;
+    }
+    if (a->kind == TYPEKIND_STRING && b->kind == TYPEKIND_STRING) {
+        return true;
+    }
+    if (a->kind == TYPEKIND_CLASS && b->kind == TYPEKIND_CLASS) {
+        return isAssignable(table, a, b) || isAssignable(table, b, a);
+    }
+    return false;
+}
+
+static Type * _resolveUnaryType(SymbolTable * table, Expression * expr) {
+    Type * operand = resolveExpressionType(table, expr->unary.operand);
+    if (isTypeError(operand)) {
+        return &_typeErrorSentinel;
+    }
+    switch (expr->unary.operator) {
+        case UNARY_OPERATOR_NOT:
+            return operand->kind == TYPEKIND_BOOL ? &_typeBoolSentinel : &_typeErrorSentinel;
+        case UNARY_OPERATOR_NEGATE:
+        case UNARY_OPERATOR_PRE_INCREMENT:
+        case UNARY_OPERATOR_PRE_DECREMENT:
+        case UNARY_OPERATOR_POST_INCREMENT:
+        case UNARY_OPERATOR_POST_DECREMENT:
+            return _numericRank(operand->kind) != NUMERIC_RANK_NONE ? operand : &_typeErrorSentinel;
+        case UNARY_OPERATOR_DEREFERENCE:
+        case UNARY_OPERATOR_ADDRESS_OF:
+        default:
+            return &_typeErrorSentinel;
+    }
+}
+
 static Type * _resolveBinaryType(SymbolTable * table, Expression * expr) {
     Type * left = resolveExpressionType(table, expr->binary.left);
     Type * right = resolveExpressionType(table, expr->binary.right);
@@ -452,14 +489,26 @@ static Type * _resolveBinaryType(SymbolTable * table, Expression * expr) {
         case BINARY_OPERATOR_DIV:
         case BINARY_OPERATOR_MOD:
             return _widenNumeric(left, right);
-        case BINARY_OPERATOR_EQUAL:
-        case BINARY_OPERATOR_NOT_EQUAL:
         case BINARY_OPERATOR_LESS:
         case BINARY_OPERATOR_GREATER:
         case BINARY_OPERATOR_LESS_EQUAL:
         case BINARY_OPERATOR_GREATER_EQUAL:
+            if (_numericRank(left->kind) == NUMERIC_RANK_NONE ||
+                _numericRank(right->kind) == NUMERIC_RANK_NONE) {
+                return &_typeErrorSentinel;
+            }
+            return &_typeBoolSentinel;
+        case BINARY_OPERATOR_EQUAL:
+        case BINARY_OPERATOR_NOT_EQUAL:
+            if (!_areComparable(table, left, right)) {
+                return &_typeErrorSentinel;
+            }
+            return &_typeBoolSentinel;
         case BINARY_OPERATOR_AND:
         case BINARY_OPERATOR_OR:
+            if (left->kind != TYPEKIND_BOOL || right->kind != TYPEKIND_BOOL) {
+                return &_typeErrorSentinel;
+            }
             return &_typeBoolSentinel;
         case BINARY_OPERATOR_ASSIGN:
             if (!isAssignable(table, right, left)) {
@@ -719,7 +768,7 @@ Type * resolveExpressionType(SymbolTable * table, Expression * expr) {
         case EXPRESSION_BINARY:
             return _resolveBinaryType(table, expr);
         case EXPRESSION_UNARY:
-            return resolveExpressionType(table, expr->unary.operand);
+            return _resolveUnaryType(table, expr);
         case EXPRESSION_FIELD_ACCESS:
         case EXPRESSION_ARROW_ACCESS:
             return _resolveFieldAccessType(table, expr);
