@@ -765,9 +765,32 @@ static void _generatePrologue(void) {
 		"#include <stdlib.h>\n"
 		"#include <string.h>\n"
 		"#include <stdio.h>\n\n"
+		"/* Allocation registry: every object is tracked and freed at program exit. */\n"
+		"#define BLOCK_SIZE 16\n\n"
+		"static void ** _allocations = NULL;\n"
+		"static int _allocCount = 0;\n\n"
+		"static void _freeAll(void) {\n"
+		"    for (int i = 0; i < _allocCount; i++) {\n"
+		"        free(_allocations[i]);\n"
+		"    }\n"
+		"    free(_allocations);\n"
+		"    _allocations = NULL;\n"
+		"    _allocCount = 0;\n"
+		"}\n\n"
 		"static void * _xmalloc(size_t size) {\n"
 		"    void * ptr = malloc(size);\n"
-		"    if (!ptr) { fprintf(stderr, \"out of memory\\n\"); exit(1); }\n"
+		"    if (!ptr) {\n"
+		"        fprintf(stderr, \"out of memory\\n\");\n"
+		"        exit(1);\n"
+		"    }\n"
+		"    if (_allocCount % BLOCK_SIZE == 0) {\n"
+		"        _allocations = realloc(_allocations, (_allocCount + BLOCK_SIZE) * sizeof(void *));\n"
+		"        if (!_allocations) {\n"
+		"            fprintf(stderr, \"out of memory\\n\");\n"
+		"            exit(1);\n"
+		"        }\n"
+		"    }\n"
+		"    _allocations[_allocCount++] = ptr;\n"
 		"    return ptr;\n"
 		"}\n\n"
 	);
@@ -784,6 +807,7 @@ static void _generateFunction(Function * function) {
 
 static void _generateMain(StatementList * body) {
 	_output(0, "int main(void) {\n");
+	_output(1, "atexit(_freeAll);\n");
 	_generateStatementList(body, 1);
 	_output(0, "}\n");
 }
