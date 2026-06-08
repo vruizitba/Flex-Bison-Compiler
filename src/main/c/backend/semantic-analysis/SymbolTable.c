@@ -845,6 +845,20 @@ Type * resolveExpressionType(SymbolTable * table, Expression * expr) {
             return _resolveFieldAccessType(table, expr);
         case EXPRESSION_CALL:
             return _resolveCallType(table, expr);
+        case EXPRESSION_INDEX: {
+            Type * arrType = resolveExpressionType(table, expr->indexAccess.array);
+            Type * idxType = resolveExpressionType(table, expr->indexAccess.index);
+            if (isTypeError(arrType) || isTypeError(idxType)) {
+                return &_typeErrorSentinel;
+            }
+            if (arrType->kind != TYPEKIND_ARRAY && arrType->kind != TYPEKIND_POINTER) {
+                return &_typeErrorSentinel;
+            }
+            if (_numericRank(idxType->kind) == NUMERIC_RANK_NONE) {
+                return &_typeErrorSentinel;
+            }
+            return arrType->inner;
+        }
         default:
             return &_typeErrorSentinel;
     }

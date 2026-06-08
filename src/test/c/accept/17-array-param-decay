@@ -1,0 +1,9 @@
+function int first(int[] a) {
+    return a[0];
+}
+
+main {
+    int[3] v;
+    (v[0] = 42);
+    int x = first(v);
+}

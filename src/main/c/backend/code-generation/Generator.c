@@ -27,6 +27,7 @@ static char * _indentation(const unsigned int indentationLevel);
 static void _output(const unsigned int indentationLevel, const char * const format, ...);
 static void _generatePrologue(void);
 static char * _generateTypeName(Type * type);
+static char * _generateDeclarator(Type * type, const char * name);
 static void _generateForwardDeclarations(Program * program);
 static void _generateField(Field * field);
 static void _generateClass(Class * classNode);
@@ -236,10 +237,32 @@ static char * _generateTypeName(Type * type) {
 	}
 }
 
-static void _generateField(Field * field) {
-	char * typeName = _generateTypeName(field->type);
-	_output(1, "%s %s;\n", typeName, field->name);
+static char * _generateDeclarator(Type * type, const char * name) {
+	if (type->kind == TYPEKIND_ARRAY && type->arraySize >= 0) {
+		char * inner = _generateTypeName(type->inner);
+		char arraySuffix[32];
+		snprintf(arraySuffix, sizeof(arraySuffix), "[%d]", type->arraySize);
+		char * result = concatenate(4, inner, " ", name, arraySuffix);
+		free(inner);
+		return result;
+	}
+	if (type->kind == TYPEKIND_ARRAY && type->arraySize == -1) {
+		/* Unsized array parameter: decay to pointer. */
+		char * inner = _generateTypeName(type->inner);
+		char * result = concatenate(3, inner, " *", name);
+		free(inner);
+		return result;
+	}
+	char * typeName = _generateTypeName(type);
+	char * result = concatenate(3, typeName, " ", name);
 	free(typeName);
+	return result;
+}
+
+static void _generateField(Field * field) {
+	char * decl = _generateDeclarator(field->type, field->name);
+	_output(1, "%s;\n", decl);
+	free(decl);
 }
 
 static void _generateClass(Class * classNode) {
@@ -357,9 +380,9 @@ static void _generateParams(Parameter * params, const char * className) {
 		if (!first) {
 			_output(0, ", ");
 		}
-		char * typeName = _generateTypeName(p->type);
-		_output(0, "%s %s", typeName, p->name);
-		free(typeName);
+		char * decl = _generateDeclarator(p->type, p->name);
+		_output(0, "%s", decl);
+		free(decl);
 		first = false;
 	}
 	_output(0, ")");
@@ -607,15 +630,15 @@ static void _generateExpressionStatement(Statement * stmt, unsigned int indent) 
 }
 
 static void _generateVariableDeclaration(Statement * stmt, unsigned int indent) {
-	char * typeName = _generateTypeName(stmt->variableDeclaration.type);
+	char * decl = _generateDeclarator(stmt->variableDeclaration.type, stmt->variableDeclaration.name);
 	if (stmt->variableDeclaration.initializer != NULL) {
-		_output(indent, "%s %s = ", typeName, stmt->variableDeclaration.name);
+		_output(indent, "%s = ", decl);
 		_generateExpression(stmt->variableDeclaration.initializer);
 		_output(0, ";\n");
 	} else {
-		_output(indent, "%s %s;\n", typeName, stmt->variableDeclaration.name);
+		_output(indent, "%s;\n", decl);
 	}
-	free(typeName);
+	free(decl);
 }
 
 static void _generateIfStatement(Statement * stmt, unsigned int indent) {
@@ -643,9 +666,9 @@ static void _generateForInitializer(Statement * stmt) {
 		return;
 	}
 	if (stmt->kind == STATEMENT_VARIABLE_DECLARATION) {
-		char * typeName = _generateTypeName(stmt->variableDeclaration.type);
-		_output(0, "%s %s", typeName, stmt->variableDeclaration.name);
-		free(typeName);
+		char * decl = _generateDeclarator(stmt->variableDeclaration.type, stmt->variableDeclaration.name);
+		_output(0, "%s", decl);
+		free(decl);
 		if (stmt->variableDeclaration.initializer != NULL) {
 			_output(0, " = ");
 			_generateExpression(stmt->variableDeclaration.initializer);

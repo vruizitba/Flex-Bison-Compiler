@@ -41,6 +41,16 @@ static CompilationStatus _collectDeclarations(SymbolTable * table, Program * pro
         }
     }
 
+    /* Reject unsized array fields. */
+    for (Class * class = program->classes; class != NULL; class = class->next) {
+        for (Field * field = class->fields; field != NULL; field = field->next) {
+            if (field->type->kind == TYPEKIND_ARRAY && field->type->arraySize == -1) {
+                logError(_logger, "Field '%s' in class '%s' requires an explicit array size.", field->name, class->name);
+                status = FAILED;
+            }
+        }
+    }
+
     /* Validate extends: parent must be a declared class. */
     for (Class * class = program->classes; class != NULL; class = class->next) {
         if (class->parentName != NULL && lookupClass(table, class->parentName) == NULL) {
@@ -125,6 +135,10 @@ static CompilationStatus _checkStatement(SymbolTable * table, Statement * statem
                 return SUCCEEDED;
             }
 
+            if (declaredType->kind == TYPEKIND_ARRAY && declaredType->arraySize == -1) {
+                logError(_logger, "Array variable '%s' requires an explicit size.", statement->variableDeclaration.name);
+                return FAILED;
+            }
             if (statement->variableDeclaration.initializer != NULL) {
                 Type * initType = resolveExpressionType(table, statement->variableDeclaration.initializer);
                 if (initType != NULL && !isAssignable(table, initType, declaredType)) {
