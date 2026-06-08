@@ -668,7 +668,7 @@ static Type * _resolveCallType(SymbolTable * table, Expression * expr) {
         return function->returnType != NULL ? function->returnType : &_typeVoidSentinel;
     }
     free(argTypes);
-    return NULL;
+    return &_typeErrorSentinel;
 }
 
 bool isAssignable(SymbolTable * table, Type * from, Type * to) {
@@ -775,6 +775,6 @@ Type * resolveExpressionType(SymbolTable * table, Expression * expr) {
         case EXPRESSION_CALL:
             return _resolveCallType(table, expr);
         default:
-            return NULL;
+            return &_typeErrorSentinel;
     }
 }
