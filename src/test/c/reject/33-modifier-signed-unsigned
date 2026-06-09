@@ -1,0 +1,3 @@
+main {
+    signed unsigned int x = 0;
+}

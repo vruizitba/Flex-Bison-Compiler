@@ -1,0 +1,8 @@
+main {
+    unsigned int u = 42;
+    short int s = 1;
+    long int l = 100000;
+    unsigned char c = 'A';
+    long double d = 3.14;
+    int sum = u + s;
+}

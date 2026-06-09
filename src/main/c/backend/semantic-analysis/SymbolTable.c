@@ -772,6 +772,32 @@ bool isTypeError(Type * type) {
     return type != NULL && type->kind == TYPEKIND_ERROR;
 }
 
+bool validateTypeModifiers(Type * type) {
+    if (type == NULL) {
+        return true;
+    }
+    if (type->kind == TYPEKIND_POINTER || type->kind == TYPEKIND_ARRAY) {
+        return validateTypeModifiers(type->inner);
+    }
+    if (type->isSigned && type->isUnsigned) {
+        return false;
+    }
+    if (type->isShort && type->isLong) {
+        return false;
+    }
+    bool hasSignedness = type->isSigned || type->isUnsigned;
+    if (hasSignedness && type->kind != TYPEKIND_INT && type->kind != TYPEKIND_CHAR) {
+        return false;
+    }
+    if (type->isShort && type->kind != TYPEKIND_INT) {
+        return false;
+    }
+    if (type->isLong && type->kind != TYPEKIND_INT && type->kind != TYPEKIND_DOUBLE) {
+        return false;
+    }
+    return true;
+}
+
 /* ---- Context ---- */
 void setCurrentClass(SymbolTable * table, const char * className) {
     if (table != NULL) {

@@ -53,6 +53,9 @@ bool isAssignable(SymbolTable * table, Type * from, Type * to);
 /** Returns the ⊥ (error) type sentinel. Safe to return from any function; never freed. */
 Type * typeError();
 bool isTypeError(Type * type);
+/** Validates that type modifier flags (signed/unsigned/short/long) are legal for the base kind.
+ *  Returns false if a modifier combination is invalid (e.g. signed+unsigned, short on double). */
+bool validateTypeModifiers(Type * type);
 
 /* ---- Context ---- */
 void setCurrentClass(SymbolTable * table, const char * className);

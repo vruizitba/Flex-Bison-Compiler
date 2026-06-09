@@ -204,18 +204,48 @@ static void _output(const unsigned int indentationLevel, const char * const form
 	va_end(arguments);
 }
 
+static char * _generateModifierPrefix(Type * type) {
+	char buf[32] = "";
+	if (type->isUnsigned) {
+		strcat(buf, "unsigned ");
+	} else if (type->isSigned) {
+		strcat(buf, "signed ");
+	}
+	if (type->isShort) {
+		strcat(buf, "short ");
+	} else if (type->isLong) {
+		strcat(buf, "long ");
+	}
+	return strdup(buf);
+}
+
 /** DSL type → C type string (heap-allocated, caller must free). bool→char, string→char*, class→ClassName*. */
 static char * _generateTypeName(Type * type) {
 	if (type == NULL) {
 		return strdup("void");
 	}
 	switch (type->kind) {
-		case TYPEKIND_INT:    return strdup("int");
+		case TYPEKIND_INT: {
+			char * prefix = _generateModifierPrefix(type);
+			char * result = concatenate(2, prefix, "int");
+			free(prefix);
+			return result;
+		}
 		case TYPEKIND_BOOL:   return strdup("char");
 		case TYPEKIND_STRING: return strdup("char *");
-		case TYPEKIND_CHAR:   return strdup("char");
+		case TYPEKIND_CHAR: {
+			char * prefix = _generateModifierPrefix(type);
+			char * result = concatenate(2, prefix, "char");
+			free(prefix);
+			return result;
+		}
 		case TYPEKIND_FLOAT:  return strdup("float");
-		case TYPEKIND_DOUBLE: return strdup("double");
+		case TYPEKIND_DOUBLE: {
+			char * prefix = _generateModifierPrefix(type);
+			char * result = concatenate(2, prefix, "double");
+			free(prefix);
+			return result;
+		}
 		case TYPEKIND_VOID:   return strdup("void");
 		case TYPEKIND_CLASS:  return concatenate(2, type->className, " *");
 		case TYPEKIND_POINTER: {

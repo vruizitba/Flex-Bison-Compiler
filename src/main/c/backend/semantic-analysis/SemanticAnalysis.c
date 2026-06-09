@@ -41,11 +41,15 @@ static CompilationStatus _collectDeclarations(SymbolTable * table, Program * pro
         }
     }
 
-    /* Reject unsized array fields. */
+    /* Validate field types: reject unsized arrays and invalid modifier combos. */
     for (Class * class = program->classes; class != NULL; class = class->next) {
         for (Field * field = class->fields; field != NULL; field = field->next) {
             if (field->type->kind == TYPEKIND_ARRAY && field->type->arraySize == -1) {
                 logError(_logger, "Field '%s' in class '%s' requires an explicit array size.", field->name, class->name);
+                status = FAILED;
+            }
+            if (!validateTypeModifiers(field->type)) {
+                logError(_logger, "Invalid type modifier combination for field '%s' in class '%s'.", field->name, class->name);
                 status = FAILED;
             }
         }
@@ -137,6 +141,10 @@ static CompilationStatus _checkStatement(SymbolTable * table, Statement * statem
 
             if (declaredType->kind == TYPEKIND_ARRAY && declaredType->arraySize == -1) {
                 logError(_logger, "Array variable '%s' requires an explicit size.", statement->variableDeclaration.name);
+                return FAILED;
+            }
+            if (!validateTypeModifiers(declaredType)) {
+                logError(_logger, "Invalid type modifier combination for variable '%s'.", statement->variableDeclaration.name);
                 return FAILED;
             }
             if (statement->variableDeclaration.initializer != NULL) {
@@ -257,9 +265,17 @@ static CompilationStatus _processBodies(SymbolTable * table, Program * program) 
     popScope(table);
 
     for (Function * function = program->functions; function != NULL; function = function->next) {
+        if (!validateTypeModifiers(function->returnType)) {
+            logError(_logger, "Invalid type modifier combination in return type of function '%s'.", function->name);
+            status = FAILED;
+        }
         pushScope(table);
         setCurrentReturnType(table, function->returnType);
         for (Parameter * p = function->parameters; p != NULL; p = p->next) {
+            if (!validateTypeModifiers(p->type)) {
+                logError(_logger, "Invalid type modifier combination for parameter '%s' in function '%s'.", p->name, function->name);
+                status = FAILED;
+            }
             if (!declareVariable(table, p->name, p->type)) {
                 logError(_logger, "Duplicate parameter '%s' in function '%s'.", p->name, function->name);
                 status = FAILED;
@@ -276,8 +292,16 @@ static CompilationStatus _processBodies(SymbolTable * table, Program * program) 
         setCurrentClass(table, class->name);
         for (Method * method = class->methods; method != NULL; method = method->next) {
             pushScope(table);
+            if (!validateTypeModifiers(method->returnType)) {
+                logError(_logger, "Invalid type modifier combination in return type of method '%s' in class '%s'.", method->name, class->name);
+                status = FAILED;
+            }
             setCurrentReturnType(table, method->returnType);
             for (Parameter * p = method->parameters; p != NULL; p = p->next) {
+                if (!validateTypeModifiers(p->type)) {
+                    logError(_logger, "Invalid type modifier combination for parameter '%s' in method '%s' of class '%s'.", p->name, method->name, class->name);
+                    status = FAILED;
+                }
                 if (!declareVariable(table, p->name, p->type)) {
                     logError(_logger, "Duplicate parameter '%s' in method '%s' of class '%s'.", p->name, method->name, class->name);
                     status = FAILED;
