@@ -17,11 +17,6 @@ typedef struct {
 	 * Symbol table populated during semantic analysis.
 	 */
 	SymbolTable * symbolTable;
-
-	// TODO: Add an stack to handle nested scopes.
-	// TODO: Add more configuration.
-	// TODO: Add whatever you need.
-	// TODO: ...
 } CompilerState;
 
 #endif
