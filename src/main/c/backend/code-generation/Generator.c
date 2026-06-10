@@ -95,7 +95,7 @@ static char * _generateModifierPrefix(Type * type) {
 	return strdup(buf);
 }
 
-/** DSL type → C type string (heap-allocated, caller must free). bool→char, string→char*, class→ClassName*. */
+/** DSL type -> C type string (heap-allocated, caller must free). bool->bool, string->char*, class->ClassName*. */
 static char * _generateTypeName(Type * type) {
 	if (type == NULL) {
 		return strdup("void");
@@ -107,7 +107,7 @@ static char * _generateTypeName(Type * type) {
 			free(prefix);
 			return result;
 		}
-		case TYPEKIND_BOOL:   return strdup("char");
+		case TYPEKIND_BOOL:   return strdup("bool");
 		case TYPEKIND_STRING: return strdup("char *");
 		case TYPEKIND_CHAR: {
 			char * prefix = _generateModifierPrefix(type);
@@ -233,7 +233,7 @@ static char * _manglingTypeName(Type * type) {
 	}
 	switch (type->kind) {
 		case TYPEKIND_INT:    return strdup("int");
-		case TYPEKIND_BOOL:   return strdup("char");
+		case TYPEKIND_BOOL:   return strdup("bool");
 		case TYPEKIND_STRING: return strdup("charptr");
 		case TYPEKIND_CHAR:   return strdup("char");
 		case TYPEKIND_FLOAT:  return strdup("float");
@@ -718,7 +718,8 @@ static void _generatePrologue(void) {
 	_output(0, "%s",
 		"#include <stdlib.h>\n"
 		"#include <string.h>\n"
-		"#include <stdio.h>\n\n"
+		"#include <stdio.h>\n"
+		"#include <stdbool.h>\n\n"
 		"/* Allocation registry: every object is tracked and freed at program exit. */\n"
 		"#define BLOCK_SIZE 16\n\n"
 		"static void ** _allocations = NULL;\n"
